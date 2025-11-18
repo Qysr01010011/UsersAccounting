@@ -1,3 +1,5 @@
+set(CMAKE_AUTOMOC ON)
+
 add_library(${PROJECT_NAME}-client-shared SHARED
         src/ui/MainUi.cpp
         src/ui/NewUserUi.cpp
@@ -21,7 +23,6 @@ target_sources(${PROJECT_NAME}-client-shared PRIVATE
 target_link_libraries(${PROJECT_NAME}-client-shared PUBLIC
         Qt5::Widgets
         Qt5::WebSockets
-        ixwebsocket
 )
 
 add_executable(${PROJECT_NAME}-client src/client.cpp)
