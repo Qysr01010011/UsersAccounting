@@ -1,15 +1,19 @@
 #pragma once
 
 #include <drogon/WebSocketController.h>
+#include "repository/DatabaseRepository.h"
 
 using namespace drogon;
 
 namespace controllers
 {
+
 class ServerManager : public drogon::WebSocketController<ServerManager>
 {
+    std::unique_ptr<DatabaseRepository> m_dbRep;
   public:
-     void handleNewMessage(const WebSocketConnectionPtr&,
+    explicit ServerManager();
+    void handleNewMessage(const WebSocketConnectionPtr&,
                                   std::string &&,
                                   const WebSocketMessageType &) override;
     void handleNewConnection(const HttpRequestPtr &,
