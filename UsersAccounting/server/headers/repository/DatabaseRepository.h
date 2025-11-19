@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <nlohmann/json.hpp>
 #include <queue>
+#include <json/value.h>
 
 
 class DatabaseRepository {
@@ -52,20 +53,20 @@ class DatabaseRepository {
     std::thread m_modifier;
     std::vector<std::thread> m_readers;
 
-    std::queue<std::pair<nlohmann::json, void(*)(nlohmann::json&&)> > m_modifyQueue,
+    std::queue<std::pair<Json::Value, std::function<void(Json::Value &&)> > > m_modifyQueue,
             m_readQueue;
 
     std::condition_variable m_readCV,
                             m_modifyCV;
 
-    std::mutex m_mtx, m_io_mtx, m_task_mtx;
+    std::mutex m_modifyMtx, m_readMtx, m_io_mtx;
 
 public:
     explicit DatabaseRepository();
 
     ~DatabaseRepository();
 
-    void handleData(nlohmann::json &&newData, void(*callback)(nlohmann::json &&));
+    void handleData(Json::Value &&newData, std::function<void(Json::Value &&)> && callback);
 
 private:
     bool dbFileExists();
@@ -76,11 +77,11 @@ private:
 
     bool openDatabase(sqlite3 **db);
 
-    void handleSelectAll(nlohmann::json &&selectData, void(*callback)(nlohmann::json &&));
+    void handleSelectAll(Json::Value &&selectData, std::function<void(Json::Value &&)> && callback);
 
-    void handleInsert(nlohmann::json &&insertData, void(*callback)(nlohmann::json &&));
+    void handleInsert(Json::Value &&insertData, std::function<void(Json::Value &&)> && callback);
 
-    void handleDelete(nlohmann::json &&deleteData, void(*callback)(nlohmann::json &&));
+    void handleDelete(Json::Value &&deleteData, std::function<void(Json::Value &&)> && callback);
 
     void startModifier();
 

@@ -5,6 +5,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if (CMAKE_CXX_STANDARD LESS 17)
+    message(FATAL_ERROR "c++17 or higher is required")
+elseif (CMAKE_CXX_STANDARD LESS 20)
+    message(STATUS "use c++17")
+else ()
+    message(STATUS "use c++20")
+endif ()
+
 include(GNUInstallDirs)
 set(CMAKE_INSTALL_PREFIX "/usr/local")
 

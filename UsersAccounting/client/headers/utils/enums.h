@@ -1,0 +1,13 @@
+//
+// Created by x01010011 on 19.11.2025.
+//
+
+#pragma once
+
+enum class Action {
+    UNKNOWN = -1,
+    SELECT,
+    INSERT,
+    DELETE,
+    STATUS
+};

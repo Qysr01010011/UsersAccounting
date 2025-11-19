@@ -1,5 +1,3 @@
-include(CheckIncludeFileCXX)
-
 check_include_file_cxx(any HAS_ANY)
 check_include_file_cxx(string_view HAS_STRING_VIEW)
 check_include_file_cxx(coroutine HAS_COROUTINE)
@@ -36,16 +34,6 @@ target_link_libraries(${PROJECT_NAME}-server PRIVATE
         ${PROJECT_NAME}-server-static
         Drogon::Drogon
 )
-
-# ##############################################################################
-
-if (CMAKE_CXX_STANDARD LESS 17)
-    message(FATAL_ERROR "c++17 or higher is required")
-elseif (CMAKE_CXX_STANDARD LESS 20)
-    message(STATUS "use c++17")
-else ()
-    message(STATUS "use c++20")
-endif ()
 
 aux_source_directory(src/controllers CTL_SRC)
 

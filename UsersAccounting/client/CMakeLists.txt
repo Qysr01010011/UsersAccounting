@@ -25,7 +25,9 @@ target_link_libraries(${PROJECT_NAME}-client-shared PUBLIC
         Qt5::WebSockets
 )
 
-add_executable(${PROJECT_NAME}-client src/client.cpp)
+add_executable(${PROJECT_NAME}-client src/client.cpp
+        headers/utils/enums.h
+        headers/utils/enumWrapper.h)
 
 target_link_libraries(${PROJECT_NAME}-client PUBLIC
         ${PROJECT_NAME}-client-shared
