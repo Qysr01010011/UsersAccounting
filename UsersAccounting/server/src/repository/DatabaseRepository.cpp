@@ -11,15 +11,32 @@ DatabaseRepository::DatabaseRepository():
     m_dbPath(getDatabasePath()),
     m_dbExists(std::filesystem::exists(m_dbPath)),
     m_finish(false){
-    if(sqlite3_config(SQLITE_CONFIG_MULTITHREAD) != SQLITE_OK)
-        std::cerr << "It is impossible set multi-thread mode in database!!!" << std::endl;
 
-    std::cout << "Database in multi-thread mode was set!!!";
+    if (sqlite3_config(SQLITE_CONFIG_MULTITHREAD) != SQLITE_OK) {
+        std::lock_guard lock(m_io_mtx);
+        std::cerr << "Can't set SQLITE_CONFIG_MULTITHREAD\n";
+    } else {
+        std::cout << "SQLite configured: MULTITHREAD\n";
+    }
+
 
     if(!m_dbExists)
-        createAndInitDatabase();
+        if(!createAndInitDatabase())
+            throw std::runtime_error("Can't create DB!!!");
 
     if(m_dbExists) {
+        sqlite3 *tmp = nullptr;
+
+        if(openDatabase(&tmp, true)) {
+            char* errMsg = nullptr;
+            sqlite3_exec(tmp, "PRAGMA journal_mode=WAL;", nullptr, nullptr, &errMsg);
+
+            if(errMsg)
+                sqlite3_free(errMsg);
+
+            sqlite3_close(tmp);
+        }
+
         m_modifier = std::thread(&DatabaseRepository::startModifier, this);
 
         m_readers.reserve(READERS_COUNT);
@@ -31,7 +48,7 @@ DatabaseRepository::DatabaseRepository():
 
 DatabaseRepository::~DatabaseRepository() {
     m_finish = true;
-    m_readCV.notify_one();
+    m_readCV.notify_all();
     m_modifyCV.notify_all();
 
     for(std::thread& reader: m_readers)
@@ -44,7 +61,12 @@ DatabaseRepository::~DatabaseRepository() {
 bool DatabaseRepository::check(int result, int target, sqlite3* db) {
     if(result != target) {
         std::lock_guard lock(m_io_mtx);
-        std::cerr << "Request database error: " << sqlite3_errmsg(db) << std::endl;
+
+        if(db)
+            std::cerr << "Request database error: " << sqlite3_errmsg(db) << std::endl;
+        else
+            std::cerr << "Request database error: db pointer is invalid!" << std::endl;
+
         return false;
     }
 
@@ -65,7 +87,7 @@ bool DatabaseRepository::dbFileExists() {
 bool DatabaseRepository::createAndInitDatabase() {
     sqlite3* db = nullptr;
 
-    if(openDatabase(&db)) {
+    if(openDatabase(&db, false)) {
         char *err;
 
         std::string create_table_request = R"(CREATE TABLE IF NOT EXISTS users (
@@ -83,6 +105,17 @@ bool DatabaseRepository::createAndInitDatabase() {
             return false;
         } else
             std::cout << "Table created successfully!" << std::endl;
+
+
+        char* errmsg = nullptr;
+        sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, &errmsg);
+        if (errmsg) {
+            std::lock_guard lock(m_io_mtx);
+            std::cerr << "PRAGMA journal_mode=WAL error: " << errmsg << std::endl;
+            sqlite3_free(errmsg);
+        }
+
+        sqlite3_busy_timeout(db, 5000);
     }
 
     m_dbExists = true;
@@ -90,15 +123,19 @@ bool DatabaseRepository::createAndInitDatabase() {
 }
 
 
-bool DatabaseRepository::openDatabase(sqlite3** db) {
-    int result = sqlite3_open(getDatabasePath().c_str(), db);
+bool DatabaseRepository::openDatabase(sqlite3** db, bool isReadOnly) {
+    int flags = isReadOnly ? (SQLITE_OPEN_READONLY) : (SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE);
+
+    int result = sqlite3_open_v2(getDatabasePath().c_str(), db, flags, nullptr);
     bool dbIsValid = check(result, SQLITE_OK, *db);
 
     if(!dbIsValid) {
         std::cerr << (m_dbExists ? "Opening" : "Creating") << " database error: " << sqlite3_errmsg(*db) << std::endl;
         sqlite3_close(*db);
-    } else
+    } else {
         std::cout << "Database was " << (m_dbExists ? "opened" : "created") << " successfully!" << std::endl;
+        sqlite3_busy_timeout(*db, 5000);
+    }
 
     return dbIsValid;
 }
@@ -107,7 +144,8 @@ bool DatabaseRepository::openDatabase(sqlite3** db) {
 void DatabaseRepository::handleData(Json::Value &&newData, std::function<void(Json::Value &&)> && callback) {
     if(!newData.isMember("action")) {
         Json::Value response;
-        response["status"] = "'Action' field is required! Unknown action!";
+        response["status"] = "error";
+        response["data"] = "'Action' field is required! Unknown action!";
         callback(std::move(response));
         return;
     }
@@ -126,111 +164,150 @@ void DatabaseRepository::handleData(Json::Value &&newData, std::function<void(Js
 }
 
 
-void DatabaseRepository::handleSelectAll(Json::Value &&selectData, std::function<void(Json::Value &&)> && callback) {
-    sqlite3* db;
+void DatabaseRepository::handleSelectAll(Json::Value &&selectData, sqlite3 *db, std::function<void(Json::Value &&)> && callback) {
+    sqlite3_stmt * row;
 
-    if(openDatabase(&db)) {
-        sqlite3_stmt * row;
+    Json::Value response;
+    response["action"] = selectData["action"].asString();
+    response["status"] = "successful";
+    response["data"] = Json::arrayValue;
 
-        Json::Value response;
-        response["list"] = Json::arrayValue;
-
-        if(check(sqlite3_prepare_v2(db, "SELECT * FROM users;", -1, &row, nullptr), SQLITE_OK, db))
-            while(sqlite3_step(row) == SQLITE_ROW) {
-                Json::Value user;
-                user["id"] = sqlite3_column_int(row, 0);
-                user["userName"] = reinterpret_cast<const char*>(sqlite3_column_text(row, 1));
-                user["email"] = reinterpret_cast<const char*>(sqlite3_column_text(row, 2));
-                response["list"].append(user);
-            }
-
-        callback(std::move(response));
-        sqlite3_finalize(row);
-    }
-}
-
-
-void DatabaseRepository::handleInsert(Json::Value &&insertData, std::function<void(Json::Value &&)> && callback) {
-    sqlite3* db;
-
-    if(openDatabase(&db)) {
-        Json::Value response;
-        sqlite3_stmt* row;
-
-        int result = sqlite3_prepare_v2(db, "INSERT INTO users(userName, email) VALUES(?,?)", -1, &row, nullptr);
-
-        if(check(result, SQLITE_OK, db)) {
-            result = sqlite3_bind_text(row, 1, insertData["userName"].asString().c_str(), -1, SQLITE_TRANSIENT);
-
-            if(check(result, SQLITE_OK, db)) {
-                result = sqlite3_bind_text(row, 2, insertData["email"].asString().c_str(), -1, SQLITE_TRANSIENT);
-
-                if(check(result, SQLITE_OK, db)) {
-                    if (check(sqlite3_step(row), SQLITE_DONE, db)) {
-                        response["status"] = "success";
-                        response["response"]["id"] = static_cast<int>(sqlite3_last_insert_rowid(db));
-                        response["response"]["userName"] = insertData["userName"].asString();
-                        response["response"]["email"] = insertData["email"].asString();
-                        callback(std::move(response));
-                    }
-                }
-            }
+    if(check(sqlite3_prepare_v2(db, "SELECT * FROM users;", -1, &row, nullptr), SQLITE_OK, db)) {
+        while (sqlite3_step(row) == SQLITE_ROW) {
+            Json::Value user;
+            user["id"] = sqlite3_column_int(row, 0);
+            user["userName"] = reinterpret_cast<const char *>(sqlite3_column_text(row, 1));
+            user["email"] = reinterpret_cast<const char *>(sqlite3_column_text(row, 2));
+            response["data"].append(user);
         }
 
-        sqlite3_finalize(row);
-    }
+        callback(std::move(response));
+    } else
+        handleError("Ошибка формирования запроса!", std::move(callback));
+
+    sqlite3_finalize(row);
 }
 
 
-void DatabaseRepository::handleDelete(Json::Value &&deleteData, std::function<void(Json::Value &&)> && callback) {
-    sqlite3* db;
+void DatabaseRepository::handleInsert(Json::Value &&insertData, sqlite3 *db, std::function<void(Json::Value &&)> && callback) {
+    Json::Value response;
+    sqlite3_stmt* row;
 
-    if(openDatabase(&db)) {
-        Json::Value response;
-        int id = deleteData["id"].asInt();
-        sqlite3_stmt* row;
-        int result = sqlite3_prepare_v2(db, "DELETE FROM users WHERE id=?;", -1, &row, nullptr);
+    int result = sqlite3_prepare_v2(db, "INSERT INTO users(userName, email) VALUES(?,?)", -1, &row, nullptr);
+
+    if(check(result, SQLITE_OK, db)) {
+        result = sqlite3_bind_text(row, 1, insertData["userName"].asString().c_str(), -1, SQLITE_TRANSIENT);
 
         if(check(result, SQLITE_OK, db)) {
-            result = sqlite3_bind_int(row, 1, id);
+            result = sqlite3_bind_text(row, 2, insertData["email"].asString().c_str(), -1, SQLITE_TRANSIENT);
 
             if(check(result, SQLITE_OK, db)) {
                 if (check(sqlite3_step(row), SQLITE_DONE, db)) {
-                    response["status"] = "success";
-                    response["response"]["id"] = id;
+                    response["action"] = insertData["action"].asString();
+                    response["status"] = "successful";
+                    response["data"]["id"] = static_cast<int>(sqlite3_last_insert_rowid(db));
+                    response["data"]["userName"] = insertData["userName"].asString();
+                    response["data"]["email"] = insertData["email"].asString();
                     callback(std::move(response));
-                }
-            }
-        }
+                } else
+                    handleError("Ошибка сохранения данных из БД!", std::move(callback));
+            } else
+                handleError("Ошибка формирования запроса!", std::move(callback));
+        } else
+            handleError("Ошибка формирования запроса!", std::move(callback));
+    } else
+        handleError("Ошибка формирования запроса!", std::move(callback));
 
-        sqlite3_finalize(row);
-    }
+    sqlite3_finalize(row);
+}
+
+
+void DatabaseRepository::handleDelete(Json::Value &&deleteData, sqlite3 *db, std::function<void(Json::Value &&)> && callback) {
+    Json::Value response;
+    int id = deleteData["id"].asInt();
+    sqlite3_stmt* row;
+    int result = sqlite3_prepare_v2(db, "DELETE FROM users WHERE id=?;", -1, &row, nullptr);
+
+    if(check(result, SQLITE_OK, db)) {
+        result = sqlite3_bind_int(row, 1, id);
+
+        if(check(result, SQLITE_OK, db)) {
+            if (check(sqlite3_step(row), SQLITE_DONE, db)) {
+                response["action"] = deleteData["action"].asString();
+                response["status"] = "successful";
+                response["data"]["id"] = id;
+                callback(std::move(response));
+            } else
+                handleError("Ошибка удаления данных из БД!", std::move(callback));
+        } else
+            handleError("Ошибка формирования запроса!", std::move(callback));
+    } else
+        handleError("Ошибка формирования запроса!", std::move(callback));
+
+    sqlite3_finalize(row);
+}
+
+
+void DatabaseRepository::handleError(std::string &&errMessage, std::function<void(Json::Value &&)> &&callback) {
+    Json::Value error;
+    error["status"] = "error";
+    error["data"] = errMessage;
+    callback(std::move(error));
 }
 
 
 void DatabaseRepository::startModifier() {
+    sqlite3 *db = nullptr;
+    bool dbOpened = openDatabase(&db, false);
+
     while(!m_finish) {
+        if(!dbOpened) {
+            std::lock_guard lock(m_io_mtx);
+            std::cerr << "Can't open Database in read/write mode!";
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+
+            if(m_finish)
+                return;
+            else
+                continue;
+        }
+
         std::unique_lock lock(m_modifyMtx);
         m_modifyCV.wait(lock, [this]() { return !m_modifyQueue.empty() || m_finish; });
 
         if (m_finish)
-            return;
+            break;
 
         std::pair<Json::Value, std::function<void(Json::Value &&)> > data = std::move(m_modifyQueue.front());
         m_modifyQueue.pop();
+        lock.unlock();
 
         std::string action = data.first["action"].asString();
 
         if (action == "insert")
-            handleInsert(std::move(data.first), std::move(data.second));
+            handleInsert(std::move(data.first), db, std::move(data.second));
         else if (action == "delete")
-            handleDelete(std::move(data.first), std::move(data.second));
+            handleDelete(std::move(data.first), db, std::move(data.second));
     }
 }
 
 
 void DatabaseRepository::startReader() {
+    sqlite3 *db = nullptr;
+    bool dbOpened = openDatabase(&db, true);
+
     while(!m_finish) {
+        if(!dbOpened) {
+            std::lock_guard lock(m_io_mtx);
+            std::cerr << "Can't open Database in read mode!";
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+
+            if(m_finish)
+                return;
+            else
+                continue;
+        }
+
         std::unique_lock lock(m_readMtx);
         m_readCV.wait(lock, [this](){return !m_readQueue.empty() || m_finish;});
 
@@ -243,6 +320,6 @@ void DatabaseRepository::startReader() {
         m_readQueue.pop();
         lock.unlock();
 
-        handleSelectAll(std::move(data.first), std::move(data.second));
+        handleSelectAll(std::move(data.first), db, std::move(data.second));
     }
 }

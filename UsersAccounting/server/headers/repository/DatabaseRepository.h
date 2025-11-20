@@ -7,16 +7,18 @@
 #include <sqlite3.h>
 #include <string>
 #include <condition_variable>
-#include <nlohmann/json.hpp>
 #include <queue>
 #include <json/value.h>
+#include <functional>
 
 
 class DatabaseRepository {
-    constexpr bool getUserDir(const char *env, std::string &dir) {
-        dir = env ? std::string(env) : "";
+    bool getUserDir(const char *env, std::string &dir) {
+        if (!env || env[0] == '\0')
+            return false;
 
-        return env && (env[0] != '\0');
+        dir = env;
+        return true;
     }
 
     std::string getDatabasePath() {
@@ -26,10 +28,10 @@ class DatabaseRepository {
         std::string userDatabaseDir = "\\UsersAccounting\\server\\database\\usersDatabase.sqlite";
 
         if(getUserDir(std::getenv("APPDATA"), userDir))
-            return userDir + "\\" + userDatabaseDir;
+            return userDir + userDatabaseDir;
 
         if(getUserDir(std::getenv("USERPROFILE"), userDir))
-            return std::string(env) + "\\AppData\\Roaming\\" + userDatabaseDir;
+            return userDir + "\\AppData\\Roaming" + userDatabaseDir;
 
         return ".\\" + userDatabaseDir;
 #else
@@ -41,14 +43,15 @@ class DatabaseRepository {
         if (getUserDir(std::getenv("HOME"), userDir))
             return userDir + "/" + userDatabaseDir;
 
-        return "~/" + userDatabaseDir;
+        return std::string(std::getenv("HOME")) + "/" + userDatabaseDir;
 #endif
     }
 
-    const std::size_t READERS_COUNT = std::max(1u, std::thread::hardware_concurrency() * 4) - 1;
+    sqlite3 *m_dbModifier = nullptr;
+    const std::size_t READERS_COUNT = std::max(2u, (std::thread::hardware_concurrency() * 4u) - 1u);
     const std::string m_dbPath;
     bool m_dbExists;
-    bool m_finish;
+    std::atomic<bool> m_finish;
 
     std::thread m_modifier;
     std::vector<std::thread> m_readers;
@@ -75,13 +78,15 @@ private:
 
     bool createAndInitDatabase();
 
-    bool openDatabase(sqlite3 **db);
+    bool openDatabase(sqlite3 **db, bool isReadOnly);
 
-    void handleSelectAll(Json::Value &&selectData, std::function<void(Json::Value &&)> && callback);
+    void handleSelectAll(Json::Value &&selectData, sqlite3 *db, std::function<void(Json::Value &&)> && callback);
 
-    void handleInsert(Json::Value &&insertData, std::function<void(Json::Value &&)> && callback);
+    void handleInsert(Json::Value &&insertData, sqlite3 *db, std::function<void(Json::Value &&)> && callback);
 
-    void handleDelete(Json::Value &&deleteData, std::function<void(Json::Value &&)> && callback);
+    void handleDelete(Json::Value &&deleteData, sqlite3 *db, std::function<void(Json::Value &&)> && callback);
+
+    void handleError(std::string&& errMessage, std::function<void(Json::Value&&)> && callback);
 
     void startModifier();
 

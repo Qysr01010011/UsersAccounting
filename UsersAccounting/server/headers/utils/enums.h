@@ -8,6 +8,12 @@ enum class Action {
     UNKNOWN = -1,
     SELECT,
     INSERT,
-    DELETE,
-    STATUS
+    DELETE
+};
+
+
+enum class Status {
+    UNKNOWN = -1,
+    SUCCESSFUL,
+    ERROR
 };

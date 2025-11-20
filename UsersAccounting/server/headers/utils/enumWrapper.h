@@ -15,33 +15,65 @@ void toLowercaseString(std::string& str) {
 }
 
 namespace enums::wrap {
-    std::string toString(Action val) {
-        switch (val) {
-            case Action::SELECT:
-                return "select";
-            case Action::INSERT:
-                return "insert";
-            case Action::DELETE:
-                return "delete";
-            case Action::STATUS:
-                return "status";
-            default: return "unknown";
+    namespace tostr {
+        std::string toString(Action val) {
+            switch (val) {
+                case Action::SELECT:
+                    return "select";
+                case Action::INSERT:
+                    return "insert";
+                case Action::DELETE:
+                    return "delete";
+                default:
+                    return "unknown";
+            }
+        }
+
+        std::string toString(Status val) {
+            switch (val) {
+                case Status::SUCCESSFUL:
+                    return "successful";
+                case Status::ERROR:
+                    return "error";
+                default:
+                    return "unknown";
+            }
         }
     }
 
-    Action fromString(std::string&& str) {
+
+    namespace fromstr {
+        int fromString(std::string &&str) {
+            toLowercaseString(str);
+            int result = -1;
+
+            if (str == "select")
+                result = static_cast<int>(Action::SELECT);
+            else if (str == "insert")
+                result = static_cast<int>(Action::INSERT);
+            else if (str == "delete")
+                result = static_cast<int>(Action::DELETE);
+            else if (str == "successful")
+                result = static_cast<int>(Status::SUCCESSFUL);
+            else if (str == "error")
+                result = static_cast<int>(Status::ERROR);
+
+            return static_cast<int>(result);
+        }
+    }
+
+
+    template<typename T>
+    std::enable_if_t<std::is_enum_v<T>, std::string>
+    constexpr toString(T val) {
+        return tostr::toString(val);
+    }
+
+    template<typename T>
+    std::enable_if_t<std::is_enum_v<T>, T>
+    constexpr fromString(std::string&& str) {
         toLowercaseString(str);
-        Action action = Action::UNKNOWN;
-
-        if(str == "select")
-            action = Action::SELECT;
-        else if(str == "insert")
-            action = Action::INSERT;
-        else if(str == "delete")
-            action = Action::DELETE;
-        else if(str == "status")
-            action = Action::STATUS;
-
-        return action;
+        int retval = fromstr::fromString(std::move(str));
+        return static_cast<T>(retval);
     }
 }

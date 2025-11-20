@@ -68,7 +68,7 @@ void UsersWindow::handleShowUsers(const QJsonArray &data) {
     for(const QJsonValue& val: data) {
         if(val.isObject()) {
             QJsonObject obj = val.toObject();
-            addNewUser(1, obj["userName"].toString(), obj["email"].toString());
+            addNewUser(obj["id"].toInt(), obj["userName"].toString(), obj["email"].toString());
         }
     }
 }

@@ -16,18 +16,28 @@ class ServerConnection: public QObject {
     QWebSocket m_ws;
 
 private slots:
-    void setConnections();
     void onConnected();
     void onDisconnected();
     void onReceivedMessage(const QString& message);
     void onError(QAbstractSocket::SocketError error);
-    void sendMessage(QJsonObject&& data);
+
+signals:
+    void selectResponse(const QJsonArray&);
+    void insertResponse(const QJsonObject&);
+    void deleteResponse(const QJsonObject&);
 public:
     explicit ServerConnection();
-    ~ServerConnection();
+    ~ServerConnection() override;
 
-    void addUser(const QJsonObject& data);
-    void deleteUser(const QJsonObject& data);
+    void requestForAddUser(const QJsonObject& data);
+    void requestForDeleteUser(const QJsonObject& data);
 
-    QJsonArray getUsersList();
+    void requestForUsersList();
+
+private:
+    void setConnections();
+
+    void handleJSON(QJsonObject&& obj);
+
+    void sendMessage(QJsonObject&& data);
 };

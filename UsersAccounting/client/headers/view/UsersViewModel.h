@@ -13,7 +13,10 @@ class UsersViewModel: public QObject {
     ServerConnection* m_connection = nullptr;
 
     explicit UsersViewModel();
+    ~UsersViewModel();
     inline static UsersViewModel* m_instance = nullptr;
+
+    void setConnections();
 public:
 
     inline static UsersViewModel* getInstance() {
@@ -23,10 +26,12 @@ public:
         return m_instance;
     }
 
-    void addNewUser(const QJsonObject&);
-    void updateUsersList();
+    void addNewUser(const QString& userName, const QString& email);
+    void deleteUser(int userId);
+    void getUsersList();
 
 signals:
     void newUserAdded(const QJsonObject&);
+    void userDeleted(const QJsonObject&);
     void showUsers(const QJsonArray&);
 };

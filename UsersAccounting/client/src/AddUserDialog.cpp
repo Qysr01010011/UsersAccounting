@@ -50,7 +50,7 @@ void AddUserDialog::resizeAndMove() {
 
 
 void AddUserDialog::showEvent(QShowEvent *e) {
-    QWidget::showEvent(e);
+    QDialog::showEvent(e);
 
     resizeAndMove();
 }
@@ -67,10 +67,7 @@ void AddUserDialog::handleApplyClicked() {
     setTextEditError(m_ui->m_teEmail, !emailIsValid);
 
     if(userNameIsValid && emailIsValid) {
-        QJsonObject jsonData;
-        jsonData["userName"] = m_ui->m_teUserName->toPlainText();
-        jsonData["email"] = m_ui->m_teEmail->toPlainText();
-        UsersViewModel::getInstance()->addNewUser(jsonData);
+        UsersViewModel::getInstance()->addNewUser(m_ui->m_teUserName->toPlainText(), m_ui->m_teEmail->toPlainText());
         this->close();
     }
 }

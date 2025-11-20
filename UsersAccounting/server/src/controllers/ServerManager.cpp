@@ -5,14 +5,6 @@
 using namespace controllers;
 
 
-ServerManager::ServerManager():
-        m_connectionId{0},
-        drogon::WebSocketController<controllers::ServerManager>(),
-        m_dbRep(std::make_unique<DatabaseRepository>()){
-
-}
-
-
 void ServerManager::handleNewMessage(const WebSocketConnectionPtr& wsConnPtr, std::string &&message, const WebSocketMessageType &type)
 {
     if(type != WebSocketMessageType::Text)
@@ -27,26 +19,28 @@ void ServerManager::handleNewMessage(const WebSocketConnectionPtr& wsConnPtr, st
     errResponse["status"] = "ERROR";
 
     if(!Json::parseFromStream(builder, iss, &data, &errors)) {
-        errResponse["message"] = errors;
+        errResponse["data"] = errors;
         wsConnPtr->sendJson(errResponse);
         return;
     }
 
     if(!isValid(data)) {
-        errResponse["message"] = "Invalid request data!";
+        errResponse["data"] = "Invalid request data!";
         wsConnPtr->sendJson(errResponse);
         return;
     }
 
-    Action action = enums::wrap::fromString(data["action"].asString());
+    std::string actionStr = data["action"].asString();
+    std::string statusStr = data["status"].asString();
 
-    m_dbRep->handleData(std::move(data), [wsConnPtr, action, this](Json::Value&& response){
+    Action action = enums::wrap::fromString<Action>(std::move(actionStr));
+    Status status = enums::wrap::fromString<Status>(std::move(statusStr));
+
+    m_dbRep->handleData(std::move(data), [wsConnPtr, action, status, this](Json::Value&& response){
         wsConnPtr->sendJson(response);
         int currentConnectionId = *wsConnPtr->getContext<int>();
 
-        if(action != Action::SELECT) {
-            response["status"] = "new";
-
+        if((action != Action::SELECT) && (status == Status::SUCCESSFUL)) {
             std::lock_guard lock(m_mtx);
             for (WebSocketConnectionPtr conn: m_connections)
                 if (currentConnectionId != *conn->getContext<int>()) {
@@ -67,7 +61,7 @@ void ServerManager::handleNewConnection(const HttpRequestPtr &req, const WebSock
 
     Json::Value response;
     response["status"] = "connected";
-    response["id"] = m_connectionId.load(std::memory_order_acq_rel);
+    response["id"] = m_connectionId.load(std::memory_order_acquire);
 
     wsConnPtr->sendJson(response);
 
@@ -91,7 +85,8 @@ void ServerManager::handleConnectionClosed(const WebSocketConnectionPtr& wsConnP
 
 bool ServerManager::isValid(const Json::Value &data) {
     if(data.isMember("action")) {
-        Action action = enums::wrap::fromString(data["action"].asString());
+        std::string actionStr(data["action"].asCString());
+        Action action = enums::wrap::fromString<Action>(std::move(actionStr));
 
         if(action == Action::UNKNOWN)
             return false;

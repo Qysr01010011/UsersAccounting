@@ -10,13 +10,12 @@ namespace controllers
 
 class ServerManager : public drogon::WebSocketController<ServerManager>
 {
-    std::atomic<int> m_connectionId;
-    std::unique_ptr<DatabaseRepository> m_dbRep;
-    std::vector<WebSocketConnectionPtr> m_connections;
+    std::atomic<int> m_connectionId = std::atomic_int(0);
+    std::unique_ptr<DatabaseRepository> m_dbRep = std::make_unique<DatabaseRepository>();
+    std::vector<WebSocketConnectionPtr> m_connections{};
     std::mutex m_mtx;
 
   public:
-    explicit ServerManager();
     void handleNewMessage(const WebSocketConnectionPtr&,
                                   std::string &&,
                                   const WebSocketMessageType &) override;

@@ -3,16 +3,19 @@
 //
 
 #include "server/ServerConnection.h"
+#include "utils/enums.h"
+#include "utils/enumWrapper.h"
 #include <qjsonobject.h>
 #include <qjsondocument.h>
 
 ServerConnection::ServerConnection() {
     setConnections();
+    m_ws.open(QUrl(QStringLiteral("ws://127.0.0.1:8080/api/users")));
 }
 
 
 ServerConnection::~ServerConnection() {
-
+    m_ws.close(QWebSocketProtocol::CloseCodeNormal, "finish");
 }
 
 
@@ -20,32 +23,33 @@ void ServerConnection::setConnections() {
     connect(&m_ws, &QWebSocket::connected, this, &ServerConnection::onConnected);
     connect(&m_ws, &QWebSocket::disconnected, this, &ServerConnection::onDisconnected);
     connect(&m_ws, &QWebSocket::textMessageReceived, this, &ServerConnection::onReceivedMessage);
-    connect(&m_ws, QOverload<QAbstractSocket::SocketError>(&QWebSocket::error), this, &ServerConnection::onError);
+    connect(&m_ws, QOverload<QAbstractSocket::SocketError>::of(&QWebSocket::error), this, &ServerConnection::onError);
 }
 
 
-void ServerConnection::addUser(const QJsonObject &data) {
+void ServerConnection::requestForAddUser(const QJsonObject &data) {
     QJsonObject request;
     request["action"] = QJsonValue("insert");
-    request["user"] = data;
+    request["data"] = data;
 
     sendMessage(std::move(request));
 }
 
 
-void ServerConnection::deleteUser(const QJsonObject &data) {
+void ServerConnection::requestForDeleteUser(const QJsonObject &data) {
     QJsonObject request;
     request["action"] = QJsonValue("delete");
-    request["user"] = data;
+    request["data"] = data;
 
     sendMessage(std::move(request));
 }
 
 
-QJsonArray ServerConnection::getUsersList() {
+void ServerConnection::requestForUsersList() {
     QJsonObject request;
     request["action"] = QJsonValue("select");
-    return QJsonArray();
+
+    sendMessage(std::move(request));
 }
 
 
@@ -60,7 +64,29 @@ void ServerConnection::onDisconnected() {
 
 
 void ServerConnection::onReceivedMessage(const QString &message) {
-    QJsonObject data;
+    qDebug() << "onReceiveMessage";
+
+    if(!(message.startsWith('{') || message.startsWith("["))){
+        qCritical() << "Message stucture is invalid: " << message << "!\nJSON expected!";
+        return;
+    }
+
+    QJsonDocument jsonDoc;
+    QJsonParseError err(QJsonParseError::NoError);
+    jsonDoc = QJsonDocument::fromJson(message.toUtf8(), &err);
+
+    if(err.error != QJsonParseError::NoError) {
+        qCritical() << "Ошибка парсинга JSON: " << err.errorString();
+        return;
+    }
+
+    if(!jsonDoc.isObject()) {
+        qCritical() << "JSON error: json object expected!";
+        return;
+    }
+
+    QJsonObject obj = jsonDoc.object();
+    handleJSON(std::move(obj));
 }
 
 
@@ -147,5 +173,46 @@ void ServerConnection::onError(QAbstractSocket::SocketError error) {
 
 
 void ServerConnection::sendMessage(QJsonObject &&data) {
+    QJsonDocument jsonDoc(data);
+    m_ws.sendTextMessage(jsonDoc.toJson(QJsonDocument::Compact));
+}
 
+
+void ServerConnection::handleJSON(QJsonObject &&obj) {
+    QJsonValue jsonStatus = obj["jsonStatus"],
+            jsonAction = obj["jsonAction"];
+
+    if(jsonStatus.isUndefined()){
+        qCritical() << "There is no jsonStatus!";
+        return;
+    }
+
+    if(jsonAction.isUndefined()) {
+        qCritical() << "There is unknown jsonAction!";
+        return;
+    }
+
+    std::string statusStr = jsonStatus.toString().toStdString(),
+            actionStr = jsonAction.toString().toStdString();
+
+    Status status = enums::wrap::fromString<Status>(std::move(statusStr));
+    Action action = enums::wrap::fromString<Action>(std::move(statusStr));
+
+    if(status == Status::UNKNOWN)
+        qCritical() << "Status of executing request is unknown";
+    else if(status == Status::ERROR)
+        qCritical() << "Error of executing request: " << obj["data"].toString();
+    else {
+        switch (action) {
+            case Action::SELECT:
+                emit selectResponse(obj["data"].toArray());
+                break;
+            case Action::INSERT:
+                emit insertResponse(obj["data"].toObject());
+            case Action::DELETE:
+                emit deleteResponse(obj["data"].toObject());
+            default:
+                qCritical() << "Unknown action with this status!";
+        }
+    }
 }
