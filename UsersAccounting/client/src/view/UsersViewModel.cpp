@@ -25,24 +25,20 @@ void UsersViewModel::setConnections() {
 
 
 void UsersViewModel::addNewUser(const QString &userName, const QString &email) {
-    QJsonObject newUser, addRequest;
+    QJsonObject newUserData;
 
-    newUser["userName"] = QJsonValue(userName);
-    newUser["email"] = QJsonValue(email);
+    newUserData["userName"] = QJsonValue(userName);
+    newUserData["email"] = QJsonValue(email);
 
-    addRequest["action"] = QJsonValue("insert");
-    addRequest["data"] = QJsonValue(newUser);
-
-    m_connection->requestForAddUser(addRequest);
+    m_connection->requestForAddUser(std::move(newUserData));
 }
 
 
 void UsersViewModel::deleteUser(int userId) {
-    QJsonObject deleteRequest;
-    deleteRequest["action"] = QJsonValue("delete");
-    deleteRequest["data"] = QJsonValue(userId);
+    QJsonObject deleteUserData;
+    deleteUserData["id"] = QJsonValue(userId);
 
-    m_connection->requestForDeleteUser(deleteRequest);
+    m_connection->requestForDeleteUser(std::move(deleteUserData));
 }
 
 

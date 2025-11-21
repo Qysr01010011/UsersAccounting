@@ -23,8 +23,13 @@ void Ui::MainUi::setupUi(QWidget *form) {
     m_pbAddUser = new QPushButton("Добавить пользователя", form);
     m_pbAddUser->setObjectName("AddUser");
 
+    m_pbDeleteUser = new QPushButton("Удалить пользователя", form);
+    m_pbDeleteUser->setObjectName("DeleteUser");
+    m_pbDeleteUser->setDisabled(true);
+
     m_verticalLayout->addWidget(m_tblUsers);
     m_verticalLayout->addLayout(m_horizontalLayout);
     m_horizontalLayout->addItem(new QSpacerItem(0, 0, QSizePolicy::Preferred));
+    m_horizontalLayout->addWidget(m_pbDeleteUser);
     m_horizontalLayout->addWidget(m_pbAddUser);
 }

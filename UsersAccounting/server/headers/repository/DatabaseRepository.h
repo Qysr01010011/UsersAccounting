@@ -10,6 +10,7 @@
 #include <queue>
 #include <json/value.h>
 #include <functional>
+#include <filesystem>
 
 
 class DatabaseRepository {
@@ -23,27 +24,28 @@ class DatabaseRepository {
 
     std::string getDatabasePath() {
         std::string userDir;
+        const std::string dbName = "usersDatabase.sqlite";
 
 #ifdef _WIN32
-        std::string userDatabaseDir = "\\UsersAccounting\\server\\database\\usersDatabase.sqlite";
+        const std::string relDbPath = "UsersAccounting\\server\\database";
 
         if(getUserDir(std::getenv("APPDATA"), userDir))
-            return userDir + userDatabaseDir;
+            return userDir + relDbPath + "\\" + dbName;
 
         if(getUserDir(std::getenv("USERPROFILE"), userDir))
-            return userDir + "\\AppData\\Roaming" + userDatabaseDir;
+            return userDir + "\\AppData\\Roaming\\" + relDbPath + "\\" + dbName;
 
-        return ".\\" + userDatabaseDir;
+        return ".\\" + relDbPath + "\\" + dbName;
 #else
-        std::string userDatabaseDir = ".local/share/UsersAccounting/server/database/usersDatabase.sqlite";
+        const std::string relDbPath = ".local/share/UsersAccounting/server/database";
 
         if (getUserDir(std::getenv("XDG_DATA_HOME"), userDir))
-            return userDir + "/" + userDatabaseDir;
+            return userDir + "/" + relDbPath + "/" + dbName;
 
         if (getUserDir(std::getenv("HOME"), userDir))
-            return userDir + "/" + userDatabaseDir;
+            return userDir + "/" + relDbPath + "/" + dbName;
 
-        return std::string(std::getenv("HOME")) + "/" + userDatabaseDir;
+        return std::string(std::getenv("HOME")) + "/" + relDbPath + "/" + dbName;
 #endif
     }
 
@@ -73,6 +75,8 @@ public:
 
 private:
     bool dbFileExists();
+
+    bool checkAndCreateDatabaseDir();
 
     bool check(int result, int target, sqlite3 *db);
 

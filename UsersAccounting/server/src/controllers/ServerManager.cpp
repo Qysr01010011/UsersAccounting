@@ -1,3 +1,4 @@
+#include <iostream>
 #include "controllers/ServerManager.h"
 #include "../../headers/utils/enums.h"
 #include "../../headers/utils/enumWrapper.h"
@@ -7,6 +8,8 @@ using namespace controllers;
 
 void ServerManager::handleNewMessage(const WebSocketConnectionPtr& wsConnPtr, std::string &&message, const WebSocketMessageType &type)
 {
+    std::cout << "handleNewMessage: " << message << std::endl;
+
     if(type != WebSocketMessageType::Text)
         return;
 
@@ -20,32 +23,38 @@ void ServerManager::handleNewMessage(const WebSocketConnectionPtr& wsConnPtr, st
 
     if(!Json::parseFromStream(builder, iss, &data, &errors)) {
         errResponse["data"] = errors;
-        wsConnPtr->sendJson(errResponse);
+        wsConnPtr->send(errResponse.toStyledString());
         return;
     }
 
     if(!isValid(data)) {
         errResponse["data"] = "Invalid request data!";
-        wsConnPtr->sendJson(errResponse);
+        wsConnPtr->send(errResponse.toStyledString());
         return;
     }
 
-    std::string actionStr = data["action"].asString();
-    std::string statusStr = data["status"].asString();
+    m_dbRep->handleData(std::move(data), [wsConnPtr, this](Json::Value&& response){
+        std::cerr << "Sending styled data: " << response.toStyledString() << std::endl;
 
-    Action action = enums::wrap::fromString<Action>(std::move(actionStr));
-    Status status = enums::wrap::fromString<Status>(std::move(statusStr));
-
-    m_dbRep->handleData(std::move(data), [wsConnPtr, action, status, this](Json::Value&& response){
-        wsConnPtr->sendJson(response);
+        wsConnPtr->send(response.toStyledString());
         int currentConnectionId = *wsConnPtr->getContext<int>();
+
+        std::string actionStr = response["action"].asString();
+        std::string statusStr = response["status"].asString();
+        std::string jsonStr = response.toStyledString();
+
+        std::cout << jsonStr << std::endl;
+
+        Action action = enums::wrap::fromString<Action>(std::move(actionStr));
+        Status status = enums::wrap::fromString<Status>(std::move(statusStr));
+
 
         if((action != Action::SELECT) && (status == Status::SUCCESSFUL)) {
             std::lock_guard lock(m_mtx);
-            for (WebSocketConnectionPtr conn: m_connections)
+            for (const WebSocketConnectionPtr& conn: m_connections)
                 if (currentConnectionId != *conn->getContext<int>()) {
                     try {
-                        conn->sendJson(response);
+                        conn->send(response.toStyledString());
                     } catch(const std::exception& e) {
                         std::cerr << "Send error: " << e.what() << std::endl;
                     }
@@ -63,7 +72,7 @@ void ServerManager::handleNewConnection(const HttpRequestPtr &req, const WebSock
     response["status"] = "connected";
     response["id"] = m_connectionId.load(std::memory_order_acquire);
 
-    wsConnPtr->sendJson(response);
+    wsConnPtr->send(response.toStyledString());
 
     {
         std::lock_guard lock(m_mtx);

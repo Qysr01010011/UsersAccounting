@@ -23,6 +23,7 @@ m_ui(new Ui::MainUi){
     this->setWindowTitle("Пользователи");
 
     createConnections();
+    UsersViewModel::getInstance()->getUsersList();
 }
 
 
@@ -33,7 +34,10 @@ UsersWindow::~UsersWindow() {
 
 void UsersWindow::createConnections() {
     connect(m_ui->m_pbAddUser, &QPushButton::clicked, this, &UsersWindow::handleAddNewUserClicked);
-    connect(UsersViewModel::getInstance(), &UsersViewModel::newUserAdded, this, &UsersWindow::handleAddNewUser);
+    connect(m_ui->m_pbDeleteUser, &QPushButton::clicked, this, &UsersWindow::handleDeleteUserClicked);
+    connect(m_ui->m_tblUsers, &QTableWidget::itemSelectionChanged, this, &UsersWindow::handleTableItemClicked);
+    connect(UsersViewModel::getInstance(), &UsersViewModel::newUserAdded, this, &UsersWindow::handleNewUserAdded);
+    connect(UsersViewModel::getInstance(), &UsersViewModel::userDeleted, this, &UsersWindow::handleUserDeleted);
     connect(UsersViewModel::getInstance(), &UsersViewModel::showUsers, this, &UsersWindow::handleShowUsers);
 }
 
@@ -41,6 +45,19 @@ void UsersWindow::createConnections() {
 void UsersWindow::handleAddNewUserClicked() {
     AddUserDialog* dlg = new AddUserDialog(this);
     dlg->exec();
+}
+
+
+void UsersWindow::handleDeleteUserClicked() {
+    int row = m_ui->m_tblUsers->currentRow();
+    int userId = m_ui->m_tblUsers->item(row, 0)->data(Qt::UserRole).toInt();
+
+    UsersViewModel::getInstance()->deleteUser(userId);
+}
+
+
+void UsersWindow::handleTableItemClicked() {
+    m_ui->m_pbDeleteUser->setEnabled(!m_ui->m_tblUsers->selectedItems().empty());
 }
 
 
@@ -59,12 +76,26 @@ void UsersWindow::showEvent(QShowEvent *event) {
 }
 
 
-void UsersWindow::handleAddNewUser(const QJsonObject &data) {
-    addNewUser(1, data["userName"].toString(), data["email"].toString());
+void UsersWindow::handleNewUserAdded(const QJsonObject &data) {
+    qDebug() << "handleNewUserAdded";
+    addNewUser(data["id"].toInt(), data["userName"].toString(), data["email"].toString());
+}
+
+
+void UsersWindow::handleUserDeleted(const QJsonObject &data) {
+    qDebug() << "handleUserDeleted";
+    for(int row = 0; row < m_ui->m_tblUsers->rowCount(); ++row) {
+        if(m_ui->m_tblUsers->item(row, 0)->data(Qt::UserRole).toInt() == data["id"].toInt()) {
+            m_ui->m_tblUsers->removeRow(row);
+            m_ui->m_tblUsers->update();
+            break;
+        }
+    }
 }
 
 
 void UsersWindow::handleShowUsers(const QJsonArray &data) {
+    qDebug() << "handleShowUsers";
     for(const QJsonValue& val: data) {
         if(val.isObject()) {
             QJsonObject obj = val.toObject();

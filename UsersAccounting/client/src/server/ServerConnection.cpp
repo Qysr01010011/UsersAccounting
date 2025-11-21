@@ -10,7 +10,7 @@
 
 ServerConnection::ServerConnection() {
     setConnections();
-    m_ws.open(QUrl(QStringLiteral("ws://127.0.0.1:8080/api/users")));
+    m_ws.open(m_wsUrl);
 }
 
 
@@ -27,7 +27,7 @@ void ServerConnection::setConnections() {
 }
 
 
-void ServerConnection::requestForAddUser(const QJsonObject &data) {
+void ServerConnection::requestForAddUser(QJsonObject &&data) {
     QJsonObject request;
     request["action"] = QJsonValue("insert");
     request["data"] = data;
@@ -36,7 +36,7 @@ void ServerConnection::requestForAddUser(const QJsonObject &data) {
 }
 
 
-void ServerConnection::requestForDeleteUser(const QJsonObject &data) {
+void ServerConnection::requestForDeleteUser(QJsonObject &&data) {
     QJsonObject request;
     request["action"] = QJsonValue("delete");
     request["data"] = data;
@@ -55,16 +55,18 @@ void ServerConnection::requestForUsersList() {
 
 void ServerConnection::onConnected() {
     qDebug() << "Connected";
+    m_isConnected = true;
 }
 
 
 void ServerConnection::onDisconnected() {
     qCritical() << "Disconnected";
+    m_isConnected = false;
 }
 
 
 void ServerConnection::onReceivedMessage(const QString &message) {
-    qDebug() << "onReceiveMessage";
+    qDebug() << "onReceiveMessage: " << message;
 
     if(!(message.startsWith('{') || message.startsWith("["))){
         qCritical() << "Message stucture is invalid: " << message << "!\nJSON expected!";
@@ -179,8 +181,8 @@ void ServerConnection::sendMessage(QJsonObject &&data) {
 
 
 void ServerConnection::handleJSON(QJsonObject &&obj) {
-    QJsonValue jsonStatus = obj["jsonStatus"],
-            jsonAction = obj["jsonAction"];
+    QJsonValue jsonStatus = obj["status"],
+            jsonAction = obj["action"];
 
     if(jsonStatus.isUndefined()){
         qCritical() << "There is no jsonStatus!";
@@ -197,6 +199,7 @@ void ServerConnection::handleJSON(QJsonObject &&obj) {
 
     Status status = enums::wrap::fromString<Status>(std::move(statusStr));
     Action action = enums::wrap::fromString<Action>(std::move(statusStr));
+    qDebug() << "handleJSON: " << QJsonDocument(obj).toJson();
 
     if(status == Status::UNKNOWN)
         qCritical() << "Status of executing request is unknown";

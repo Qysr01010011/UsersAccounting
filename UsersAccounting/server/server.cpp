@@ -3,10 +3,11 @@
 
 int main() {
     //Set HTTP listener address and port
-
-    drogon::app()
-    .addListener("0.0.0.0", 8080)
-    .run();
+    std::cout << "Hello, Drogon!" << std::endl;
+    std::cout << "Set ip: 0.0.0.0 and port: 8080" << std::endl;
+    drogon::app().addListener("0.0.0.0", 8080, false);
+    std::cout << "Start server!" << std::endl;
+    drogon::app().run();
 
     return 0;
 }

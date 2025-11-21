@@ -18,6 +18,7 @@ namespace Ui {
         QHBoxLayout *m_horizontalLayout;
         QTableWidget *m_tblUsers;
         QPushButton *m_pbAddUser;
+        QPushButton *m_pbDeleteUser;
         QSpacerItem *m_spacer;
 
         void setupUi(QWidget *form);

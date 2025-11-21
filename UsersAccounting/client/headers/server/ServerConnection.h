@@ -9,11 +9,14 @@
 #include <qjsondocument.h>
 #include <qwebsocket.h>
 #include <qjsonvalue.h>
+#include <condition_variable>
 
 
 class ServerConnection: public QObject {
     Q_OBJECT
     QWebSocket m_ws;
+    bool m_isConnected = false;
+    QUrl m_wsUrl = QUrl(QStringLiteral("ws://127.0.0.1:8080/api/users"));
 
 private slots:
     void onConnected();
@@ -29,8 +32,8 @@ public:
     explicit ServerConnection();
     ~ServerConnection() override;
 
-    void requestForAddUser(const QJsonObject& data);
-    void requestForDeleteUser(const QJsonObject& data);
+    void requestForAddUser(QJsonObject&& data);
+    void requestForDeleteUser(QJsonObject&& data);
 
     void requestForUsersList();
 
