@@ -1,6 +1,13 @@
-set(CMAKE_AUTOMOC ON)
+if(APPLE OR WIN32)
+    set(CLIENT_LIB_TYPE SHARED)
+    set(CLIENT_LIB_SUFFIX shared)
+else ()
+    set(CLIENT_LIB_TYPE STATIC)
+    set(CLIENT_LIB_SUFFIX static)
+endif ()
 
-add_library(${PROJECT_NAME}-client-shared SHARED
+
+add_library(${PROJECT_NAME}-client-${CLIENT_LIB_SUFFIX} SHARED
         src/ui/MainUi.cpp
         src/ui/NewUserUi.cpp
         src/UsersWindow.cpp
@@ -14,19 +21,37 @@ add_library(${PROJECT_NAME}-client-shared SHARED
         headers/view/UsersViewModel.h
 )
 
-target_include_directories(${PROJECT_NAME}-client-shared PUBLIC
+target_include_directories(${PROJECT_NAME}-client-${CLIENT_LIB_SUFFIX} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/headers>
+    $<INSTALL_INTERFACE:include/${PROJECT_NAME}/client>
 )
 
-target_link_libraries(${PROJECT_NAME}-client-shared PUBLIC
-        Qt5::Widgets
-        Qt5::WebSockets
+target_link_libraries(${PROJECT_NAME}-client-${CLIENT_LIB_SUFFIX} PUBLIC
+        ${QT_PREFIX}::Widgets
+        ${QT_PREFIX}::WebSockets
 )
 
-add_executable(${PROJECT_NAME}-client src/client.cpp)
+if(WIN32)
+    add_executable(${PROJECT_NAME}-client WIN32 src/client.cpp)
+else ()
+    add_executable(${PROJECT_NAME}-client src/client.cpp)
+endif ()
 
 target_link_libraries(${PROJECT_NAME}-client PUBLIC
-        ${PROJECT_NAME}-client-shared
+        ${PROJECT_NAME}-client-${CLIENT_LIB_SUFFIX}
 )
 
-install(TARGETS ${PROJECT_NAME}-client ${PROJECT_NAME}-client-shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(APPLE)
+    set_target_properties(${PROJECT_NAME}-client PROPERTIES
+            MACOSX_BUNDLE TRUE
+            MACOSX_BUNDLE_INFO_PLIST ${CMAKE_CURRENT_SOURCE_DIR}/Info.plist
+    )
+endif ()
+
+install(TARGETS ${PROJECT_NAME}-client ${PROJECT_NAME}-client-${CLIENT_LIB_SUFFIX}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(DIRECTORY headers DESTINATION include/${PROJECT_NAME}/client)
