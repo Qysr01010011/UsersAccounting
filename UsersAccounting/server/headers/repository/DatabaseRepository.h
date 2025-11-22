@@ -90,7 +90,7 @@ private:
 
     void handleDelete(Json::Value &&deleteData, sqlite3 *db, std::function<void(Json::Value &&)> && callback);
 
-    void handleError(std::string&& errMessage, std::function<void(Json::Value&&)> && callback);
+    void handleError(std::string&& errMessage, std::string&& action, std::function<void(Json::Value&&)> && callback);
 
     void startModifier();
 

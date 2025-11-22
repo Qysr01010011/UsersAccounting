@@ -14,6 +14,7 @@ enum class Action {
 
 enum class Status {
     UNKNOWN = -1,
+    CONNECTED,
     SUCCESSFUL,
     ERROR
 };

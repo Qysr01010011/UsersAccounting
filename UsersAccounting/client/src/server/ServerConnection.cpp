@@ -39,7 +39,7 @@ void ServerConnection::requestForAddUser(QJsonObject &&data) {
 void ServerConnection::requestForDeleteUser(QJsonObject &&data) {
     QJsonObject request;
     request["action"] = QJsonValue("delete");
-    request["data"] = data;
+    request["data"] = QJsonValue(data);
 
     sendMessage(std::move(request));
 }
@@ -66,8 +66,6 @@ void ServerConnection::onDisconnected() {
 
 
 void ServerConnection::onReceivedMessage(const QString &message) {
-    qDebug() << "onReceiveMessage: " << message;
-
     if(!(message.startsWith('{') || message.startsWith("["))){
         qCritical() << "Message stucture is invalid: " << message << "!\nJSON expected!";
         return;
@@ -198,13 +196,14 @@ void ServerConnection::handleJSON(QJsonObject &&obj) {
             actionStr = jsonAction.toString().toStdString();
 
     Status status = enums::wrap::fromString<Status>(std::move(statusStr));
-    Action action = enums::wrap::fromString<Action>(std::move(statusStr));
-    qDebug() << "handleJSON: " << QJsonDocument(obj).toJson();
+    Action action = enums::wrap::fromString<Action>(std::move(actionStr));
 
     if(status == Status::UNKNOWN)
         qCritical() << "Status of executing request is unknown";
     else if(status == Status::ERROR)
         qCritical() << "Error of executing request: " << obj["data"].toString();
+    else if(status == Status::CONNECTED)
+        emit connectionResponse(obj);
     else {
         switch (action) {
             case Action::SELECT:
@@ -212,8 +211,10 @@ void ServerConnection::handleJSON(QJsonObject &&obj) {
                 break;
             case Action::INSERT:
                 emit insertResponse(obj["data"].toObject());
+                break;
             case Action::DELETE:
                 emit deleteResponse(obj["data"].toObject());
+                break;
             default:
                 qCritical() << "Unknown action with this status!";
         }

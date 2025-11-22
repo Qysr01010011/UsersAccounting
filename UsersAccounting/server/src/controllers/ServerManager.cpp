@@ -97,10 +97,7 @@ bool ServerManager::isValid(const Json::Value &data) {
         std::string actionStr(data["action"].asCString());
         Action action = enums::wrap::fromString<Action>(std::move(actionStr));
 
-        if(action == Action::UNKNOWN)
-            return false;
-
-        return true;
+        return action != Action::UNKNOWN;
     }
 
     return false;

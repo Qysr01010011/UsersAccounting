@@ -31,6 +31,7 @@ public:
     void getUsersList();
 
 signals:
+    void connectedToServer(const QJsonObject&);
     void newUserAdded(const QJsonObject&);
     void userDeleted(const QJsonObject&);
     void showUsers(const QJsonArray&);

@@ -31,6 +31,8 @@ namespace enums::wrap {
 
         std::string toString(Status val) {
             switch (val) {
+                case Status::CONNECTED:
+                    return "connected";
                 case Status::SUCCESSFUL:
                     return "successful";
                 case Status::ERROR:
@@ -53,6 +55,8 @@ namespace enums::wrap {
                 result = static_cast<int>(Action::INSERT);
             else if (str == "delete")
                 result = static_cast<int>(Action::DELETE);
+            else if (str == "connected")
+                result = static_cast<int>(Status::CONNECTED);
             else if (str == "successful")
                 result = static_cast<int>(Status::SUCCESSFUL);
             else if (str == "error")

@@ -171,15 +171,12 @@ bool DatabaseRepository::openDatabase(sqlite3** db, bool isReadOnly) {
 void DatabaseRepository::handleData(Json::Value &&newData, std::function<void(Json::Value &&)> && callback) {
     std::cout << "handleData: " << newData.toStyledString() << std::endl;
     if(!m_dbExists) {
-        handleError("No database connection!!!", std::move(callback));
+        handleError("No database connection!!!", newData["action"].asString(), std::move(callback));
         return;
     }
 
     if(!newData.isMember("action")) {
-        Json::Value response;
-        response["status"] = "error";
-        response["data"] = "'Action' field is required! Unknown action!";
-        callback(std::move(response));
+        handleError("'Action' field is required! Unknown action!", newData["action"].asString(), std::move(callback));
         return;
     }
 
@@ -216,7 +213,7 @@ void DatabaseRepository::handleSelectAll(Json::Value &&selectData, sqlite3 *db, 
 
         callback(std::move(response));
     } else
-        handleError("Ошибка формирования запроса!", std::move(callback));
+        handleError("Ошибка формирования запроса!", "select", std::move(callback));
 
     sqlite3_finalize(row);
 }
@@ -248,13 +245,13 @@ void DatabaseRepository::handleInsert(Json::Value &&insertData, sqlite3 *db, std
                     response["data"]["email"] = email;
                     callback(std::move(response));
                 } else
-                    handleError("Ошибка сохранения данных из БД!", std::move(callback));
+                    handleError("Ошибка сохранения данных из БД!", "insert", std::move(callback));
             } else
-                handleError("Ошибка формирования запроса!", std::move(callback));
+                handleError("Ошибка формирования запроса!", "insert", std::move(callback));
         } else
-            handleError("Ошибка формирования запроса!", std::move(callback));
+            handleError("Ошибка формирования запроса!", "insert", std::move(callback));
     } else
-        handleError("Ошибка формирования запроса!", std::move(callback));
+        handleError("Ошибка формирования запроса!", "insert", std::move(callback));
 
     sqlite3_finalize(row);
 }
@@ -262,7 +259,7 @@ void DatabaseRepository::handleInsert(Json::Value &&insertData, sqlite3 *db, std
 
 void DatabaseRepository::handleDelete(Json::Value &&deleteData, sqlite3 *db, std::function<void(Json::Value &&)> && callback) {
     Json::Value response;
-    int id = deleteData["id"].asInt();
+    int id = deleteData["data"]["id"].asInt();
     sqlite3_stmt* row;
     int result = sqlite3_prepare_v2(db, "DELETE FROM users WHERE id=?;", -1, &row, nullptr);
 
@@ -276,19 +273,20 @@ void DatabaseRepository::handleDelete(Json::Value &&deleteData, sqlite3 *db, std
                 response["data"]["id"] = id;
                 callback(std::move(response));
             } else
-                handleError("Ошибка удаления данных из БД!", std::move(callback));
+                handleError("Ошибка удаления данных из БД!", "delete", std::move(callback));
         } else
-            handleError("Ошибка формирования запроса!", std::move(callback));
+            handleError("Ошибка формирования запроса!", "delete", std::move(callback));
     } else
-        handleError("Ошибка формирования запроса!", std::move(callback));
+        handleError("Ошибка формирования запроса!", "delete", std::move(callback));
 
     sqlite3_finalize(row);
 }
 
 
-void DatabaseRepository::handleError(std::string &&errMessage, std::function<void(Json::Value &&)> &&callback) {
+void DatabaseRepository::handleError(std::string &&errMessage, std::string&& action, std::function<void(Json::Value &&)> &&callback) {
     Json::Value error;
     error["status"] = "error";
+    error["action"] = action;
     error["data"] = errMessage;
     callback(std::move(error));
 }

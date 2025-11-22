@@ -23,7 +23,6 @@ m_ui(new Ui::MainUi){
     this->setWindowTitle("Пользователи");
 
     createConnections();
-    UsersViewModel::getInstance()->getUsersList();
 }
 
 
@@ -36,6 +35,7 @@ void UsersWindow::createConnections() {
     connect(m_ui->m_pbAddUser, &QPushButton::clicked, this, &UsersWindow::handleAddNewUserClicked);
     connect(m_ui->m_pbDeleteUser, &QPushButton::clicked, this, &UsersWindow::handleDeleteUserClicked);
     connect(m_ui->m_tblUsers, &QTableWidget::itemSelectionChanged, this, &UsersWindow::handleTableItemClicked);
+    connect(UsersViewModel::getInstance(), &UsersViewModel::connectedToServer, this, &UsersWindow::handleServerConnectionResponse);
     connect(UsersViewModel::getInstance(), &UsersViewModel::newUserAdded, this, &UsersWindow::handleNewUserAdded);
     connect(UsersViewModel::getInstance(), &UsersViewModel::userDeleted, this, &UsersWindow::handleUserDeleted);
     connect(UsersViewModel::getInstance(), &UsersViewModel::showUsers, this, &UsersWindow::handleShowUsers);
@@ -73,6 +73,12 @@ void UsersWindow::showEvent(QShowEvent *event) {
     QWidget::showEvent(event);
 
     resizeAndMove();
+}
+
+
+void UsersWindow::handleServerConnectionResponse(const QJsonObject &data) {
+    qDebug() << "handleServerConnectionResponse";
+    UsersViewModel::getInstance()->getUsersList();
 }
 
 

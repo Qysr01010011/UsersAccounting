@@ -57,11 +57,11 @@ void AddUserDialog::showEvent(QShowEvent *e) {
 
 
 void AddUserDialog::handleApplyClicked() {
-    std::regex re = std::regex("^[a-z0-9\\.]+@(gmail|mail|yandex|ya|bk|inbox)\\.(ru|com)");
+    std::regex re = std::regex("^[a-z0-9\\.]+@[a-z]+\\.[a-z]{2,3}$");
     std::string mail = m_ui->m_teEmail->toPlainText().toStdString();
 
     bool userNameIsValid = !m_ui->m_teUserName->toPlainText().trimmed().isEmpty(),
-         emailIsValid = std::regex_match(m_ui->m_teEmail->toPlainText().toStdString().c_str(), std::regex(R"(^[a-zA-Z0-9.]+@(gmail|mail|yandex|ya|bk|inbox)\.(ru|com)$)"));
+         emailIsValid = std::regex_match(m_ui->m_teEmail->toPlainText().toStdString().c_str(), re);
 
     setTextEditError(m_ui->m_teUserName, !userNameIsValid);
     setTextEditError(m_ui->m_teEmail, !emailIsValid);

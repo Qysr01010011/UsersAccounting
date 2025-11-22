@@ -25,6 +25,7 @@ private slots:
     void onError(QAbstractSocket::SocketError error);
 
 signals:
+    void connectionResponse(const QJsonObject&);
     void selectResponse(const QJsonArray&);
     void insertResponse(const QJsonObject&);
     void deleteResponse(const QJsonObject&);

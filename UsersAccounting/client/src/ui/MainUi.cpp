@@ -17,6 +17,7 @@ void Ui::MainUi::setupUi(QWidget *form) {
     m_tblUsers = new QTableWidget(0, 2, form);
     m_tblUsers->setObjectName("UsersTable");
     m_tblUsers->setHorizontalHeaderLabels({"Имя пользователя", "Электронная почта"});
+    m_tblUsers->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_tblUsers->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     m_tblUsers->horizontalHeader()->setStretchLastSection(true);
 

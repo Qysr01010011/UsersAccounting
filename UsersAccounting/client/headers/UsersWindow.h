@@ -31,6 +31,7 @@ private slots:
     void handleAddNewUserClicked();
     void handleDeleteUserClicked();
     void handleTableItemClicked();
+    void handleServerConnectionResponse(const QJsonObject& data);
     void handleNewUserAdded(const QJsonObject& data);
     void handleUserDeleted(const QJsonObject& data);
     void handleShowUsers(const QJsonArray& data);

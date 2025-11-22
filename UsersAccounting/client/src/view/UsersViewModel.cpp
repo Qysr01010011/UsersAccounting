@@ -18,6 +18,7 @@ UsersViewModel::~UsersViewModel() {
 
 
 void UsersViewModel::setConnections() {
+    connect(m_connection, &ServerConnection::connectionResponse, this, &UsersViewModel::connectedToServer);
     connect(m_connection, &ServerConnection::selectResponse, this, &UsersViewModel::showUsers);
     connect(m_connection, &ServerConnection::insertResponse, this, &UsersViewModel::newUserAdded);
     connect(m_connection, &ServerConnection::deleteResponse, this, &UsersViewModel::userDeleted);
