@@ -10,12 +10,15 @@ endif ()
 add_library(${PROJECT_NAME}-client-${CLIENT_LIB_SUFFIX} SHARED
         src/ui/MainUi.cpp
         src/ui/NewUserUi.cpp
+        src/ui/NewServerUi.cpp
         src/UsersWindow.cpp
         src/AddUserDialog.cpp
+        src/AddServerDialog.cpp
         src/server/ServerConnection.cpp
         src/view/UsersViewModel.cpp
 
         headers/AddUserDialog.h
+        headers/AddServerDialog.h
         headers/UsersWindow.h
         headers/server/ServerConnection.h
         headers/view/UsersViewModel.h
@@ -32,9 +35,15 @@ target_link_libraries(${PROJECT_NAME}-client-${CLIENT_LIB_SUFFIX} PUBLIC
 )
 
 if(WIN32)
-    add_executable(${PROJECT_NAME}-client WIN32 src/client.cpp)
+    add_executable(${PROJECT_NAME}-client WIN32 src/client.cpp
+            src/ui/NewServerUi.cpp
+            headers/ui/NewServerUi.h
+            headers/models/ServerData.h)
 else ()
-    add_executable(${PROJECT_NAME}-client src/client.cpp)
+    add_executable(${PROJECT_NAME}-client src/client.cpp
+            src/ui/NewServerUi.cpp
+            headers/ui/NewServerUi.h
+            headers/models/ServerData.h)
 endif ()
 
 target_link_libraries(${PROJECT_NAME}-client PUBLIC

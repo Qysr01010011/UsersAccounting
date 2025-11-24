@@ -10,6 +10,7 @@ endif ()
 add_library(${PROJECT_NAME}-server-${SERVER_LIB_SUFFIX} ${SERVER_LIB_TYPE}
     src/controllers/ServerManager.cpp
     src/repository/DatabaseRepository.cpp
+    src/cmd_parser/CommandLineParser.cpp
 )
 
 set_target_properties(${PROJECT_NAME}-server-${SERVER_LIB_SUFFIX} PROPERTIES POSITION_INDEPENDENT_CODE ON)
@@ -34,6 +35,10 @@ target_link_libraries(${PROJECT_NAME}-server PRIVATE
 if(WIN32)
     target_link_libraries(${PROJECT_NAME}-server PRIVATE ws2_32)
     target_compile_definitions(${PROJECT_NAME}-server PRIVATE _WIN32_WINNT=0x0A00)
+endif ()
+
+if(APPLE)
+    target_compile_definitions(${PROJECT_NAME}-server-${SERVER_LIB_SUFFIX} PRIVATE SQLITE_THREADSAFE=1)
 endif ()
 
 install(TARGETS ${PROJECT_NAME}-server ${PROJECT_NAME}-server-${SERVER_LIB_SUFFIX}

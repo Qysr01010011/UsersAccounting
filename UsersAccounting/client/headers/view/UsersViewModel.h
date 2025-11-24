@@ -30,6 +30,7 @@ public:
     void addNewUser(const QString& userName, const QString& email);
     void deleteUser(int userId);
     void getUsersList();
+    void setNewServerData(const QString& ip, int port);
 
 signals:
     void connectedToServer(const QJsonObject&);

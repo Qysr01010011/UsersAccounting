@@ -5,12 +5,16 @@
 
 #ifdef _WIN32
 #include <windows.h>
-SetConsoleOutputCP(CP_UTF8)
 #endif
+
 
 int main(int argc, char* argv[]) {
     //Set HTTP listener address and port
-    std::cout << "Hello, Drogon!" << std::endl;
+    LOG_INFO << "Hello, Drogon!";
+
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8)
+#endif
 
     CommandLineData cld = CommandLineParser::parse(argc, argv);
 
@@ -19,11 +23,12 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    drogon::app().addListener("0.0.0.0", 8080, false);
-    drogon::app().setLogPath("logs");
+    LOG_INFO << "IP = " << cld.ip << " and PORT = " << cld.port << " was set!";
+
+    drogon::app().addListener(cld.ip, cld.port, false);
     drogon::app().setLogLevel(trantor::Logger::kInfo);
 
-    std::cout << "Start server!" << std::endl;
+    LOG_INFO << "Start server!";
 
     drogon::app().run();
 

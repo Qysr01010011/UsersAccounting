@@ -38,6 +38,7 @@ public:
 
     void requestForUsersList();
 
+    void setServerData(const QString& ip, int port);
 private:
     void setConnections();
 

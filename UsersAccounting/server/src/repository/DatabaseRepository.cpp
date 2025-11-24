@@ -5,6 +5,7 @@
 #include "repository/DatabaseRepository.h"
 #include <iostream>
 #include <filesystem>
+#include <trantor/utils/Logger.h>
 
 
 DatabaseRepository::DatabaseRepository():
@@ -13,18 +14,21 @@ DatabaseRepository::DatabaseRepository():
     m_finish(false) {
 
     if(checkAndCreateDatabaseDir()) {
+        int rc = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
 
-        if (sqlite3_config(SQLITE_CONFIG_MULTITHREAD) != SQLITE_OK) {
+        if (rc != SQLITE_OK && rc != SQLITE_MISUSE) {
             std::lock_guard lock(m_io_mtx);
-            std::cerr << "Can't set SQLITE_CONFIG_MULTITHREAD\n";
+            LOG_WARN << "Can't set SQLITE_CONFIG_MULTITHREAD\n";
         } else {
-            std::cout << "SQLite configured: MULTITHREAD\n";
+            LOG_INFO << "SQLite configured: MULTITHREAD\n";
         }
 
 
         if (!m_dbExists)
-            if (!createAndInitDatabase())
-                throw std::runtime_error("Can't create DB!!!");
+            if (!createAndInitDatabase()) {
+                LOG_FATAL << "Can't create DB!!!";
+                return;
+            }
 
         if (m_dbExists) {
             sqlite3 *tmp = nullptr;
@@ -47,11 +51,11 @@ DatabaseRepository::DatabaseRepository():
                 m_readers.emplace_back(&DatabaseRepository::startReader, this);
         }
     } else
-        std::cerr << "Error of creating database!!!" << std::endl << "All requests to database will be ignored!" << std::endl;
+        LOG_ERROR << "Error of creating database!!!\n" << "All requests to database will be ignored!";
 }
 
 DatabaseRepository::~DatabaseRepository() {
-    m_finish = true;
+    m_finish.store(true, std::memory_order_release);
     m_readCV.notify_all();
     m_modifyCV.notify_all();
 
@@ -67,9 +71,9 @@ bool DatabaseRepository::check(int result, int target, sqlite3* db) {
         std::lock_guard lock(m_io_mtx);
 
         if(db)
-            std::cerr << "Request database error: " << sqlite3_errmsg(db) << std::endl;
+            LOG_ERROR << "Request database error: " << sqlite3_errmsg(db);
         else
-            std::cerr << "Request database error: db pointer is invalid!" << std::endl;
+            LOG_ERROR << "Request database error: db pointer is invalid!";
 
         return false;
     }
@@ -80,7 +84,7 @@ bool DatabaseRepository::check(int result, int target, sqlite3* db) {
 
 bool DatabaseRepository::dbFileExists() {
     if(!(m_dbExists = std::filesystem::exists(getDatabasePath()))) {
-        std::cerr << "Database does not exists. Try to create database..." << std::endl;
+        LOG_ERROR << "Database does not exists. Try to create database...";
         return createAndInitDatabase();
     }
 
@@ -89,23 +93,23 @@ bool DatabaseRepository::dbFileExists() {
 
 
 bool DatabaseRepository::checkAndCreateDatabaseDir() {
-    std::cout << "Check database path: " << m_dbPath << std::endl;
+    LOG_INFO << "Check database path: " << m_dbPath;
     std::filesystem::path dbPath = m_dbPath;
 
     if(!std::filesystem::exists(dbPath)) {
-        std::cout << m_dbPath << " does not exists! Try to create..." << std::endl;
+        LOG_INFO << m_dbPath << " does not exists! Try to create...";
 
         std::error_code error;
         std::filesystem::create_directories(dbPath.parent_path(), error);
 
         if(error) {
-            std::cerr << "Error of creating database path: " << error.value() << ", message: " << error.message() << std::endl;
+            LOG_FATAL << "Error of creating database path: " << error.value() << ", message: " << error.message();
             return false;
         }
 
-        std::cout << "Database path successfully created!" << std::endl;
+        LOG_INFO << "Database path successfully created!";
     } else
-        std::cout << m_dbPath << " is exists!" << std::endl;
+        LOG_INFO << m_dbPath << " is exists!";
 
     return true;
 }
@@ -126,19 +130,19 @@ bool DatabaseRepository::createAndInitDatabase() {
         int result = sqlite3_exec(db, create_table_request.c_str(), nullptr, nullptr, &err);
 
         if(result != SQLITE_OK) {
-            std::cerr << "Creating table error: " << err << std::endl;
+            LOG_FATAL << "Creating table error: " << err;
             sqlite3_free(err);
             sqlite3_close(db);
             return false;
         } else
-            std::cout << "Table created successfully!" << std::endl;
+            LOG_INFO << "Table created successfully!";
 
 
         char* errmsg = nullptr;
         sqlite3_exec(db, "PRAGMA journal_mode=WAL;", nullptr, nullptr, &errmsg);
         if (errmsg) {
             std::lock_guard lock(m_io_mtx);
-            std::cerr << "PRAGMA journal_mode=WAL error: " << errmsg << std::endl;
+            LOG_WARN << "PRAGMA journal_mode=WAL error: " << errmsg;
             sqlite3_free(errmsg);
         }
 
@@ -157,7 +161,7 @@ bool DatabaseRepository::openDatabase(sqlite3** db, bool isReadOnly) {
     bool dbIsValid = check(result, SQLITE_OK, *db);
 
     if(!dbIsValid) {
-        std::cerr << (m_dbExists ? "Opening" : "Creating") << " database error: " << sqlite3_errmsg(*db) << std::endl;
+        LOG_ERROR << (m_dbExists ? "Opening" : "Creating") << " database error: " << sqlite3_errmsg(*db);
         sqlite3_close(*db);
     } else {
         std::cout << "Database was " << (m_dbExists ? "opened" : "created") << " successfully!" << std::endl;
@@ -169,7 +173,7 @@ bool DatabaseRepository::openDatabase(sqlite3** db, bool isReadOnly) {
 
 
 void DatabaseRepository::handleData(Json::Value &&newData, std::function<void(Json::Value &&)> && callback) {
-    std::cout << "handleData: " << newData.toStyledString() << std::endl;
+    LOG_INFO << "handleData: " << newData.toStyledString();
     if(!m_dbExists) {
         handleError("No database connection!!!", newData["action"].asString(), std::move(callback));
         return;
@@ -299,10 +303,10 @@ void DatabaseRepository::startModifier() {
     while(true) {
         if(!dbOpened) {
             std::lock_guard lock(m_io_mtx);
-            std::cerr << "Can't open Database in read/write mode!";
+            LOG_ERROR << "Can't open Database in read/write mode!";
             std::this_thread::sleep_for(std::chrono::seconds(5));
 
-            if(m_finish)
+            if(m_finish.load(std::memory_order_acquire))
                 return;
             else
                 continue;
@@ -335,7 +339,7 @@ void DatabaseRepository::startReader() {
     while(!m_finish) {
         if(!dbOpened) {
             std::lock_guard lock(m_io_mtx);
-            std::cerr << "Can't open Database in read mode!";
+            LOG_ERROR << "Can't open Database in read mode!";
             std::this_thread::sleep_for(std::chrono::seconds(5));
 
             if(m_finish)

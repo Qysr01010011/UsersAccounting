@@ -56,18 +56,25 @@ void ServerConnection::requestForUsersList() {
 }
 
 
+void ServerConnection::setServerData(const QString &ip, int port) {
+    m_appClosed = true;
+    m_ws.close();
+    m_wsUrl.setScheme("ws");
+    m_wsUrl.setHost(ip);
+    m_wsUrl.setPort(port);
+    m_wsUrl.setPath("/api/users");
+    m_appClosed = false;
+    m_ws.open(m_wsUrl);
+}
+
+
 void ServerConnection::onConnected() {
     qDebug() << "Connected";
 }
 
 
 void ServerConnection::onDisconnected() {
-    qCritical() << "Disconnected";
-
-    if(!m_appClosed)
-        QTimer::singleShot(3000, [this](){
-            m_ws.open(m_wsUrl);
-        });
+    qCritical() << m_wsUrl.path() << "Disconnected";
 }
 
 
@@ -175,6 +182,11 @@ void ServerConnection::onError(QAbstractSocket::SocketError error) {
     }
 
     qCritical() << err_message;
+
+    if(!m_appClosed)
+        QTimer::singleShot(3000, [this](){
+            m_ws.open(m_wsUrl);
+        });
 }
 
 

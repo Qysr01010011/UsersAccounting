@@ -6,7 +6,7 @@
 
 
 class QWidget;
-class QTextEdit;
+class QLineEdit;
 class QHBoxLayout;
 class QVBoxLayout;
 class QFormLayout;
@@ -15,13 +15,13 @@ class QPushButton;
 namespace Ui {
     class NewUserUi {
     public:
-        QVBoxLayout *m_verticalLayout;
-        QHBoxLayout *m_horizontalLayout;
-        QFormLayout *m_formLayout;
-        QTextEdit *m_teUserName;
-        QTextEdit *m_teEmail;
-        QPushButton *m_pbApply;
-        QPushButton *m_pbCancel;
+        QVBoxLayout *verticalLayout;
+        QHBoxLayout *horizontalLayout;
+        QFormLayout *formLayout;
+        QLineEdit *leUserName;
+        QLineEdit *leEmail;
+        QPushButton *pbApply;
+        QPushButton *pbCancel;
 
         void setupUi(QWidget *form);
     };

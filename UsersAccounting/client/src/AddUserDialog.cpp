@@ -11,7 +11,7 @@
 #include <qpushbutton.h>
 #include <qjsonarray.h>
 #include <qjsonobject.h>
-#include <qtextedit.h>
+#include <qlineedit.h>
 #include <iostream>
 #include <regex>
 
@@ -32,8 +32,8 @@ AddUserDialog::~AddUserDialog() {
 
 
 void AddUserDialog::createConnections() {
-    connect(m_ui->m_pbApply, &QPushButton::clicked, this, &AddUserDialog::handleApplyClicked);
-    connect(m_ui->m_pbCancel, &QPushButton::clicked, this, &AddUserDialog::close);
+    connect(m_ui->pbApply, &QPushButton::clicked, this, &AddUserDialog::handleApplyClicked);
+    connect(m_ui->pbCancel, &QPushButton::clicked, this, &AddUserDialog::close);
 }
 
 
@@ -62,26 +62,27 @@ void AddUserDialog::showEvent(QShowEvent *e) {
 
 void AddUserDialog::handleApplyClicked() {
     QRegularExpression re("^[a-z0-9\\.]+@[a-z]+\\.[a-z]{2,3}$");
-    std::string mail = m_ui->m_teEmail->toPlainText().toStdString();
+    std::string mail = m_ui->leEmail->text().toStdString();
 
-    bool userNameIsValid = !m_ui->m_teUserName->toPlainText().trimmed().isEmpty(),
-         emailIsValid = re.match(m_ui->m_teEmail->toPlainText()).hasMatch();
+    bool userNameIsValid = !m_ui->leUserName->text().trimmed().isEmpty(),
+         emailIsValid = re.match(m_ui->leEmail->text()).hasMatch();
 
-    setTextEditError(m_ui->m_teUserName, !userNameIsValid);
-    setTextEditError(m_ui->m_teEmail, !emailIsValid);
+    setTextEditError(m_ui->leUserName, !userNameIsValid);
+    setTextEditError(m_ui->leEmail, !emailIsValid);
 
     if(userNameIsValid && emailIsValid) {
-        UsersViewModel::getInstance()->addNewUser(m_ui->m_teUserName->toPlainText(), m_ui->m_teEmail->toPlainText());
+        UsersViewModel::getInstance()->addNewUser(m_ui->leUserName->text(), m_ui->leEmail->text());
         this->close();
     }
 }
 
 
-void AddUserDialog::setTextEditError(QTextEdit *te, bool isError) {
-    QPalette pal = te->palette();
+void AddUserDialog::setTextEditError(QLineEdit *le, bool isError) {
+    QPalette pal = le->palette();
+
     if(isError)
         pal.setColor(QPalette::Normal, QPalette::Base, QColor::fromRgb(215, 95, 95));
     else
         pal.setColor(QPalette::Normal, QPalette::Base, this->palette().color(QPalette::Base));
-    te->setPalette(pal);
+    le->setPalette(pal);
 }

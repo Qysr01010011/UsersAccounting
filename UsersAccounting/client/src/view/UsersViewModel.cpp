@@ -46,3 +46,8 @@ void UsersViewModel::deleteUser(int userId) {
 void UsersViewModel::getUsersList() {
     m_connection->requestForUsersList();
 }
+
+
+void UsersViewModel::setNewServerData(const QString &ip, int port) {
+    m_connection->setServerData(ip, port);
+}

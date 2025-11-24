@@ -6,7 +6,7 @@
 
 #include <qdialog.h>
 
-class QTextEdit;
+class QLineEdit;
 
 namespace Ui {
     class NewUserUi;
@@ -28,5 +28,5 @@ public slots:
 private:
     void createConnections();
     void resizeAndMove();
-    void setTextEditError(QTextEdit* te, bool isError);
+    void setTextEditError(QLineEdit* le, bool isError);
 };

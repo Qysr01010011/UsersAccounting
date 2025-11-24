@@ -23,30 +23,19 @@ class DatabaseRepository {
     }
 
     std::string getDatabasePath() {
-        std::string userDir;
-        const std::string dbName = "usersDatabase.sqlite";
+        namespace fs = std::filesystem;
+        fs::path base;
+        const std::string relDbPath = "UserAccounting/server/database/usersDatabase.sqlite";
 
 #ifdef _WIN32
-        const std::string relDbPath = "UsersAccounting\\server\\database";
-
-        if(getUserDir(std::getenv("APPDATA"), userDir))
-            return userDir + relDbPath + "\\" + dbName;
-
-        if(getUserDir(std::getenv("USERPROFILE"), userDir))
-            return userDir + "\\AppData\\Roaming\\" + relDbPath + "\\" + dbName;
-
-        return ".\\" + relDbPath + "\\" + dbName;
+        base = std::getenv("APPDATA") ? std::getenv("APPDATA") : fs::path(std::getenv("USERPROFILE")) / "AppData/Roaming";
+#elif defined(APPLE)
+        base = std::filesystem::path(std::getenv("HOME")) / "Library/Application Support";
 #else
-        const std::string relDbPath = ".local/share/UsersAccounting/server/database";
-
-        if (getUserDir(std::getenv("XDG_DATA_HOME"), userDir))
-            return userDir + "/" + relDbPath + "/" + dbName;
-
-        if (getUserDir(std::getenv("HOME"), userDir))
-            return userDir + "/" + relDbPath + "/" + dbName;
-
-        return std::string(std::getenv("HOME")) + "/" + relDbPath + "/" + dbName;
+        base = std::getenv("XDG_DATA_HOME") ? fs::path(std::getenv("XDG_DATA_HOME")) : fs::path(std::getenv("HOME")) / ".local/share";
 #endif
+
+        return (base / relDbPath).string();
     }
 
     sqlite3 *m_dbModifier = nullptr;

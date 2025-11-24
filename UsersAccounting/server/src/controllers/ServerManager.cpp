@@ -8,7 +8,7 @@ using namespace controllers;
 
 void ServerManager::handleNewMessage(const WebSocketConnectionPtr& wsConnPtr, std::string &&message, const WebSocketMessageType &type)
 {
-    std::cout << "handleNewMessage: " << message << std::endl;
+    LOG_INFO << "handleNewMessage: " << message;
 
     if(type != WebSocketMessageType::Text)
         return;
@@ -34,7 +34,7 @@ void ServerManager::handleNewMessage(const WebSocketConnectionPtr& wsConnPtr, st
     }
 
     m_dbRep->handleData(std::move(data), [wsConnPtr, this](Json::Value&& response){
-        std::cerr << "Sending styled data: " << response.toStyledString() << std::endl;
+        LOG_ERROR << "Sending styled data: " << response.toStyledString();
 
         wsConnPtr->send(response.toStyledString());
         int currentConnectionId = *wsConnPtr->getContext<int>();
@@ -56,7 +56,7 @@ void ServerManager::handleNewMessage(const WebSocketConnectionPtr& wsConnPtr, st
                     try {
                         conn->send(response.toStyledString());
                     } catch(const std::exception& e) {
-                        std::cerr << "Send error: " << e.what() << std::endl;
+                        LOG_ERROR << "Send error: " << e.what();
                     }
                 }
         }

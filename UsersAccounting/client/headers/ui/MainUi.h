@@ -10,16 +10,19 @@ class QPushButton;
 class QVBoxLayout;
 class QHBoxLayout;
 class QSpacerItem;
+class QComboBox;
 
 namespace Ui {
     class MainUi {
     public:
-        QVBoxLayout *m_verticalLayout;
-        QHBoxLayout *m_horizontalLayout;
-        QTableWidget *m_tblUsers;
-        QPushButton *m_pbAddUser;
-        QPushButton *m_pbDeleteUser;
-        QSpacerItem *m_spacer;
+        QVBoxLayout *verticalLayout;
+        QHBoxLayout *horizontalLayout;
+        QHBoxLayout *horizontalLayout2;
+        QTableWidget *tblUsers;
+        QPushButton *pbAddUser;
+        QPushButton *pbDeleteUser;
+        QPushButton *pbAddServer;
+        QComboBox* cbbServers;
 
         void setupUi(QWidget *form);
     };

@@ -8,29 +8,43 @@
 #include <qtablewidget.h>
 #include <qpushbutton.h>
 #include <qheaderview.h>
+#include <qcombobox.h>
+#include <qlistview.h>
 
 
 void Ui::MainUi::setupUi(QWidget *form) {
-    m_verticalLayout = new QVBoxLayout(form);
-    m_horizontalLayout = new QHBoxLayout();
+    verticalLayout = new QVBoxLayout(form);
+    horizontalLayout = new QHBoxLayout();
+    horizontalLayout2 = new QHBoxLayout();
 
-    m_tblUsers = new QTableWidget(0, 2, form);
-    m_tblUsers->setObjectName("UsersTable");
-    m_tblUsers->setHorizontalHeaderLabels({"Имя пользователя", "Электронная почта"});
-    m_tblUsers->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_tblUsers->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-    m_tblUsers->horizontalHeader()->setStretchLastSection(true);
+    tblUsers = new QTableWidget(0, 2, form);
+    tblUsers->setObjectName("UsersTable");
+    tblUsers->setHorizontalHeaderLabels({"Имя пользователя", "Электронная почта"});
+    tblUsers->setSelectionBehavior(QAbstractItemView::SelectRows);
+    tblUsers->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    tblUsers->horizontalHeader()->setStretchLastSection(true);
 
-    m_pbAddUser = new QPushButton("Добавить пользователя", form);
-    m_pbAddUser->setObjectName("AddUser");
+    pbAddServer = new QPushButton("Добавить сервер", form);
+    pbAddServer->setObjectName("AddServer");
 
-    m_pbDeleteUser = new QPushButton("Удалить пользователя", form);
-    m_pbDeleteUser->setObjectName("DeleteUser");
-    m_pbDeleteUser->setDisabled(true);
+    pbAddUser = new QPushButton("Добавить пользователя", form);
+    pbAddUser->setObjectName("AddUser");
 
-    m_verticalLayout->addWidget(m_tblUsers);
-    m_verticalLayout->addLayout(m_horizontalLayout);
-    m_horizontalLayout->addItem(new QSpacerItem(0, 0, QSizePolicy::Preferred));
-    m_horizontalLayout->addWidget(m_pbDeleteUser);
-    m_horizontalLayout->addWidget(m_pbAddUser);
+    pbDeleteUser = new QPushButton("Удалить пользователя", form);
+    pbDeleteUser->setObjectName("DeleteUser");
+    pbDeleteUser->setDisabled(true);
+
+    cbbServers = new QComboBox(form);
+    cbbServers->setObjectName("ServersList");
+    cbbServers->setMaxVisibleItems(10);
+
+    horizontalLayout->addWidget(cbbServers);
+    horizontalLayout->addWidget(pbAddServer);
+
+    verticalLayout->addLayout(horizontalLayout);
+    verticalLayout->addWidget(tblUsers);
+    verticalLayout->addLayout(horizontalLayout2);
+    horizontalLayout->addItem(new QSpacerItem(0, 0, QSizePolicy::Preferred));
+    horizontalLayout2->addWidget(pbDeleteUser);
+    horizontalLayout2->addWidget(pbAddUser);
 }
