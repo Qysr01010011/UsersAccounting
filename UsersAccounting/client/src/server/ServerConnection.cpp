@@ -7,14 +7,17 @@
 #include "utils/enumWrapper.h"
 #include <qjsonobject.h>
 #include <qjsondocument.h>
+#include <QTimer>
 
 ServerConnection::ServerConnection() {
+    QNetworkProxyFactory::setUseSystemConfiguration(true);
     setConnections();
     m_ws.open(m_wsUrl);
 }
 
 
 ServerConnection::~ServerConnection() {
+    m_appClosed = true;
     m_ws.close(QWebSocketProtocol::CloseCodeNormal, "finish");
 }
 
@@ -55,13 +58,16 @@ void ServerConnection::requestForUsersList() {
 
 void ServerConnection::onConnected() {
     qDebug() << "Connected";
-    m_isConnected = true;
 }
 
 
 void ServerConnection::onDisconnected() {
     qCritical() << "Disconnected";
-    m_isConnected = false;
+
+    if(!m_appClosed)
+        QTimer::singleShot(3000, [this](){
+            m_ws.open(m_wsUrl);
+        });
 }
 
 
@@ -195,8 +201,8 @@ void ServerConnection::handleJSON(QJsonObject &&obj) {
     std::string statusStr = jsonStatus.toString().toStdString(),
             actionStr = jsonAction.toString().toStdString();
 
-    Status status = enums::wrap::fromString<Status>(std::move(statusStr));
-    Action action = enums::wrap::fromString<Action>(std::move(actionStr));
+    Status status = enums::wrap::status::fromString(statusStr);
+    Action action = enums::wrap::action::fromString(actionStr);
 
     if(status == Status::UNKNOWN)
         qCritical() << "Status of executing request is unknown";

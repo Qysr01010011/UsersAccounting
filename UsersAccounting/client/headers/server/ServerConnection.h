@@ -15,7 +15,7 @@
 class ServerConnection: public QObject {
     Q_OBJECT
     QWebSocket m_ws;
-    bool m_isConnected = false;
+    bool m_appClosed = false;
     QUrl m_wsUrl = QUrl(QStringLiteral("ws://127.0.0.1:8080/api/users"));
 
 private slots:

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <qjsonobject.h>
+#include <QApplication>
 
 class ServerConnection;
 
@@ -12,8 +13,8 @@ class UsersViewModel: public QObject {
     Q_OBJECT
     ServerConnection* m_connection = nullptr;
 
-    explicit UsersViewModel();
-    ~UsersViewModel();
+    explicit UsersViewModel(QObject* parent);
+    ~UsersViewModel() override;
     inline static UsersViewModel* m_instance = nullptr;
 
     void setConnections();
@@ -21,7 +22,7 @@ public:
 
     inline static UsersViewModel* getInstance() {
         if(m_instance == nullptr)
-            m_instance = new UsersViewModel();
+            m_instance = new UsersViewModel(qApp);
 
         return m_instance;
     }

@@ -10,7 +10,7 @@
 
 void toLowercaseString(std::string& str) {
     std::for_each(str.begin(), str.end(), [](char& ch){
-        ch = static_cast<char>(std::tolower(ch));
+        ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
     });
 }
 
@@ -44,25 +44,39 @@ namespace enums::wrap {
     }
 
 
-    namespace fromstr {
-        int fromString(std::string &&str) {
-            toLowercaseString(str);
-            int result = -1;
+    namespace action {
+        Action fromString(const std::string &str) {
+            std::string actionStr(str);
+            toLowercaseString(actionStr);
+            Action action = Action::UNKNOWN;
 
-            if (str == "select")
-                result = static_cast<int>(Action::SELECT);
-            else if (str == "insert")
-                result = static_cast<int>(Action::INSERT);
-            else if (str == "delete")
-                result = static_cast<int>(Action::DELETE);
-            else if (str == "connected")
-                result = static_cast<int>(Status::CONNECTED);
-            else if (str == "successful")
-                result = static_cast<int>(Status::SUCCESSFUL);
-            else if (str == "error")
-                result = static_cast<int>(Status::ERROR);
+            if (actionStr == "select")
+                action = Action::SELECT;
+            else if (actionStr == "insert")
+                action = Action::INSERT;
+            else if (actionStr == "delete")
+                action = Action::DELETE;
 
-            return static_cast<int>(result);
+            return action;
+        }
+    }
+
+
+    namespace status {
+        Status fromString(const std::string &str) {
+            std::string statusStr(str);
+            toLowercaseString(statusStr);
+
+            Status status = Status::UNKNOWN;
+
+            if (statusStr == "connected")
+                status = Status::CONNECTED;
+            else if (statusStr == "successful")
+                status = Status::SUCCESSFUL;
+            else if (statusStr == "error")
+                status = Status::ERROR;
+
+            return status;
         }
     }
 
@@ -71,13 +85,5 @@ namespace enums::wrap {
     std::enable_if_t<std::is_enum_v<T>, std::string>
     constexpr toString(T val) {
         return tostr::toString(val);
-    }
-
-    template<typename T>
-    std::enable_if_t<std::is_enum_v<T>, T>
-    constexpr fromString(std::string&& str) {
-        toLowercaseString(str);
-        int retval = fromstr::fromString(std::move(str));
-        return static_cast<T>(retval);
     }
 }

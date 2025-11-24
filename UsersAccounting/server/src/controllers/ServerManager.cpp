@@ -45,8 +45,8 @@ void ServerManager::handleNewMessage(const WebSocketConnectionPtr& wsConnPtr, st
 
         std::cout << jsonStr << std::endl;
 
-        Action action = enums::wrap::fromString<Action>(std::move(actionStr));
-        Status status = enums::wrap::fromString<Status>(std::move(statusStr));
+        Action action = enums::wrap::action::fromString(actionStr);
+        Status status = enums::wrap::status::fromString(statusStr);
 
 
         if((action != Action::SELECT) && (status == Status::SUCCESSFUL)) {
@@ -95,7 +95,7 @@ void ServerManager::handleConnectionClosed(const WebSocketConnectionPtr& wsConnP
 bool ServerManager::isValid(const Json::Value &data) {
     if(data.isMember("action")) {
         std::string actionStr(data["action"].asCString());
-        Action action = enums::wrap::fromString<Action>(std::move(actionStr));
+        Action action = enums::wrap::action::fromString(actionStr);
 
         return action != Action::UNKNOWN;
     }

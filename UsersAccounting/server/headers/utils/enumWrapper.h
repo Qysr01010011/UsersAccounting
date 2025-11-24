@@ -44,25 +44,40 @@ namespace enums::wrap {
     }
 
 
-    namespace fromstr {
-        int fromString(std::string &&str) {
-            toLowercaseString(str);
-            int result = -1;
+    namespace action {
+        Action fromString(const std::string &str) {
+            std::string actionStr(str);
+            toLowercaseString(actionStr);
+
+            Action action = Action::UNKNOWN;
 
             if (str == "select")
-                result = static_cast<int>(Action::SELECT);
+                action = Action::SELECT;
             else if (str == "insert")
-                result = static_cast<int>(Action::INSERT);
+                action = Action::INSERT;
             else if (str == "delete")
-                result = static_cast<int>(Action::DELETE);
-            else if (str == "connected")
-                result = static_cast<int>(Status::CONNECTED);
-            else if (str == "successful")
-                result = static_cast<int>(Status::SUCCESSFUL);
-            else if (str == "error")
-                result = static_cast<int>(Status::ERROR);
+                action = Action::DELETE;
 
-            return static_cast<int>(result);
+            return action;
+        }
+    }
+
+
+    namespace status {
+        Status fromString(const std::string &str) {
+            std::string statusStr(str);
+            toLowercaseString(statusStr);
+
+            Status status = Status::UNKNOWN;
+
+            if (str == "connected")
+                status = Status::CONNECTED;
+            else if (str == "successful")
+                status = Status::SUCCESSFUL;
+            else if (str == "error")
+                status = Status::ERROR;
+
+            return status;
         }
     }
 
@@ -71,13 +86,5 @@ namespace enums::wrap {
     std::enable_if_t<std::is_enum_v<T>, std::string>
     constexpr toString(T val) {
         return tostr::toString(val);
-    }
-
-    template<typename T>
-    std::enable_if_t<std::is_enum_v<T>, T>
-    constexpr fromString(std::string&& str) {
-        toLowercaseString(str);
-        int retval = fromstr::fromString(std::move(str));
-        return static_cast<T>(retval);
     }
 }

@@ -40,10 +40,14 @@ void AddUserDialog::createConnections() {
 void AddUserDialog::resizeAndMove() {
     this->setFixedSize(400, 120);
 
-    QPoint center = mapToGlobal(QGuiApplication::primaryScreen()->availableGeometry().center());
+    QPoint center;
 
     if(this->parent() != nullptr)
-        center = mapToGlobal(this->parentWidget()->geometry().center());
+        center = this->parentWidget()->geometry().center();
+    else {
+        QScreen* screen = this->screen();
+        center = screen->availableGeometry().center();
+    }
 
     this->move(center.x() - this->width() / 2, center.y() - this->height() / 2);
 }
@@ -57,11 +61,11 @@ void AddUserDialog::showEvent(QShowEvent *e) {
 
 
 void AddUserDialog::handleApplyClicked() {
-    std::regex re = std::regex("^[a-z0-9\\.]+@[a-z]+\\.[a-z]{2,3}$");
+    QRegularExpression re("^[a-z0-9\\.]+@[a-z]+\\.[a-z]{2,3}$");
     std::string mail = m_ui->m_teEmail->toPlainText().toStdString();
 
     bool userNameIsValid = !m_ui->m_teUserName->toPlainText().trimmed().isEmpty(),
-         emailIsValid = std::regex_match(m_ui->m_teEmail->toPlainText().toStdString().c_str(), re);
+         emailIsValid = re.match(m_ui->m_teEmail->toPlainText()).hasMatch();
 
     setTextEditError(m_ui->m_teUserName, !userNameIsValid);
     setTextEditError(m_ui->m_teEmail, !emailIsValid);

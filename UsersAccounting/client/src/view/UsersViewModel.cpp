@@ -6,7 +6,7 @@
 #include "server/ServerConnection.h"
 
 
-UsersViewModel::UsersViewModel():
+UsersViewModel::UsersViewModel(QObject* parent): QObject(parent),
         m_connection(new ServerConnection){
     setConnections();
 }

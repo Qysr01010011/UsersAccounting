@@ -43,8 +43,8 @@ void UsersWindow::createConnections() {
 
 
 void UsersWindow::handleAddNewUserClicked() {
-    AddUserDialog* dlg = new AddUserDialog(this);
-    dlg->exec();
+    AddUserDialog dlg(this);
+    dlg.exec();
 }
 
 
@@ -63,7 +63,9 @@ void UsersWindow::handleTableItemClicked() {
 
 void UsersWindow::resizeAndMove() {
     this->setFixedSize(900, 600);
-    QPoint center = QGuiApplication::primaryScreen()->availableGeometry().center();
+
+    QScreen* screen = this->screen();
+    QPoint center = screen->availableGeometry().center();
 
     this->move(center.x() - this->width() / 2, center.y() - this->height()  / 2);
 }
