@@ -58,6 +58,9 @@ void UsersWindow::loadServersFromConfig() {
     for(int i = 0; i < size; ++i) {
         srvConfigFile.setArrayIndex(i);
 
+        if(srvConfigFile.value("name").toString().isEmpty())
+            continue;
+
         m_serversList.push_back({
             srvConfigFile.value("name").toString(),
             srvConfigFile.value("ip").toString(),
@@ -67,29 +70,36 @@ void UsersWindow::loadServersFromConfig() {
     }
 
     srvConfigFile.endArray();
+    srvConfigFile.sync();
 
     for(const ServerData& data: m_serversList) {
         int index = m_ui->cbbServers->count();
-        QString title = data.serverIp + ":" + QString::fromStdString(std::to_string(data.serverPort));
+        QString title = data.serverName;
 
         m_ui->cbbServers->addItem(title);
         m_ui->cbbServers->setItemData(index, QVariant::fromValue(data.serverIp), Qt::UserRole);
         m_ui->cbbServers->setItemData(index, QVariant::fromValue(data.serverPort), Qt::UserRole + 1);
 
-        if(data.isCurrent)
+        if(data.isCurrent) {
             m_ui->cbbServers->setCurrentIndex(index);
+            m_ui->cbbServers->setCurrentText(data.serverName);
+        }
     }
 }
 
 
 void UsersWindow::writeServersToConfig() {
+    m_serversList.remove(0, 1);
     QSettings srvConfigFile("srv_config.ini", QSettings::IniFormat);
     srvConfigFile.clear();
+
+    // Берём размер на один меньше потому, что при заполнении списка серверов всегда добавляется умолчательный элемент,
+    // который нам не нужно записывать в config.
     int size = m_serversList.size();
 
-    srvConfigFile.beginWriteArray("servers");
+    srvConfigFile.beginWriteArray("servers", size);
 
-    for(int i = 1; i < size; ++i) {
+    for(int i = 0; i < size; ++i) {
         srvConfigFile.setArrayIndex(i);
 
         srvConfigFile.setValue("name", QVariant::fromValue(m_serversList.at(i).serverName));
@@ -128,17 +138,21 @@ void UsersWindow::handleTableItemClicked() {
 }
 
 
-void UsersWindow::handleServerSelected(int item) {
-    QString ip = m_ui->cbbServers->itemData(item, Qt::UserRole).toString();
-    int port = m_ui->cbbServers->itemData(item, Qt::UserRole + 1).toInt();
+void UsersWindow::handleServerSelected(int newIndex) {
+    QString ip = m_ui->cbbServers->itemData(newIndex, Qt::UserRole).toString();
+    int port = m_ui->cbbServers->itemData(newIndex, Qt::UserRole + 1).toInt();
+    int oldIndex = 0;
 
-    for(ServerData& data: m_serversList)
-        if(data.isCurrent){
+    for(ServerData& data: m_serversList) {
+        if (data.isCurrent) {
             data.isCurrent = false;
             break;
         }
 
-    (m_serversList.begin() + item + 1)->isCurrent = true;
+        ++oldIndex;
+    }
+
+    (m_serversList.begin() + newIndex)->isCurrent = true;
     UsersViewModel::getInstance()->setNewServerData(ip, port);
 }
 

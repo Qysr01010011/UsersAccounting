@@ -36,7 +36,7 @@ private slots:
     void handleAddNewServerClicked();
     void handleDeleteUserClicked();
     void handleTableItemClicked();
-    void handleServerSelected(int item);
+    void handleServerSelected(int newIndex);
     void handleServerConnectionResponse(const QJsonObject& data);
     void handleNewUserAdded(const QJsonObject& data);
     void handleNewServerCreated(const QString& name, const QString& ip, int port);

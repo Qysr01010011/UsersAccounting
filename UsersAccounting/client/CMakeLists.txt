@@ -16,12 +16,14 @@ add_library(${PROJECT_NAME}-client-${CLIENT_LIB_SUFFIX} SHARED
         src/AddServerDialog.cpp
         src/server/ServerConnection.cpp
         src/view/UsersViewModel.cpp
+        src/delegate/ServerItemDelegate.cpp
 
         headers/AddUserDialog.h
         headers/AddServerDialog.h
         headers/UsersWindow.h
         headers/server/ServerConnection.h
         headers/view/UsersViewModel.h
+        headers/delegate/ServerItemDelegate.h
 )
 
 target_include_directories(${PROJECT_NAME}-client-${CLIENT_LIB_SUFFIX} PUBLIC

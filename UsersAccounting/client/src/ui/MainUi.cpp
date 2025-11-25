@@ -3,6 +3,7 @@
 //
 
 #include "../../headers/ui/MainUi.h"
+#include "delegate/ServerItemDelegate.h"
 #include <qwidget.h>
 #include <qboxlayout.h>
 #include <qtablewidget.h>
@@ -37,6 +38,7 @@ void Ui::MainUi::setupUi(QWidget *form) {
     cbbServers = new QComboBox(form);
     cbbServers->setObjectName("ServersList");
     cbbServers->setMaxVisibleItems(10);
+    cbbServers->setItemDelegate(new ServerItemDelegate(cbbServers));
 
     horizontalLayout->addWidget(cbbServers);
     horizontalLayout->addWidget(pbAddServer);

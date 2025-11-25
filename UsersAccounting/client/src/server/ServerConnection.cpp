@@ -74,7 +74,7 @@ void ServerConnection::onConnected() {
 
 
 void ServerConnection::onDisconnected() {
-    qCritical() << m_wsUrl.path() << "Disconnected";
+    qCritical() << m_wsUrl.toString() << ": Disconnected";
 }
 
 
